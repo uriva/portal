@@ -9,6 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "crypto-random-string": "^5.0.0",
     "ws": "^8.11.0"
   }
 }
