@@ -44,7 +44,7 @@ server.on("connection", (socket, request) => {
     redisAddToSet(publicKey, myIP);
   };
   const challenge = cryptoRandomString({ length: 10 });
-  socket.send(JSON.stringify({ event: "challenge", payload: challenge }));
+  socket.send(JSON.stringify({ type: "challenge", payload: challenge }));
   socket.on("close", () => {
     if (publicKeyForSocket) {
       publicKeyToSocket[publicKeyForSocket] =
@@ -59,8 +59,8 @@ server.on("connection", (socket, request) => {
     }
   });
   socket.on("message", (message) => {
-    const { event, payload } = JSON.parse(message);
-    if (event === "hub-id") {
+    const { type, payload } = JSON.parse(message);
+    if (type === "hub-id") {
       const { certificate } = payload;
       if (validate(hubsPublicKey, certificate, challenge)) {
         if (has(hubIpToSocket, ip)) {
@@ -68,36 +68,36 @@ server.on("connection", (socket, request) => {
         }
         hubIpToSocket[ip] = socket;
         isPeerHub = true;
-        socket.send(JSON.stringify({ event: "hub-validated" }));
+        socket.send(JSON.stringify({ type: "hub-validated" }));
       } else {
-        socket.send(JSON.stringify({ event: "bad-hub-auth" }));
+        socket.send(JSON.stringify({ type: "bad-hub-auth" }));
       }
     }
 
-    if (event === "relay") {
+    if (type === "relay") {
       if (!isPeerHub) return;
       const { to, from, message } = payload;
       publicKeyForSocket[to].send(
         JSON.stringify({
-          event: "message",
+          type: "message",
           payload: { from, message },
         }),
       );
     }
 
-    if (event === "id") {
+    if (type === "id") {
       if (publicKeyForSocket) return; // A socket will serve only one publicKey until its death.
       const { publicKey, certificate } = payload;
       if (validate(publicKey, certificate, challenge)) {
         setSocketPublicKey(publicKey);
-        socket.send(JSON.stringify({ event: "validated" }));
+        socket.send(JSON.stringify({ type: "validated" }));
       } else {
-        socket.send(JSON.stringify({ event: "bad-auth" }));
+        socket.send(JSON.stringify({ type: "bad-auth" }));
       }
     }
-    if (event === "message") {
+    if (type === "message") {
       if (!publicKeyForSocket) return; // Unauthenticated sockets are not to be used.
-      const { to, message } = payload;
+      const { to, message, certificate } = payload;
       if (!canSendMessage(publicKeyForSocket, to)) {
         return;
       }
@@ -106,8 +106,8 @@ server.on("connection", (socket, request) => {
         publicKeyToSocket[to].map((socket) => {
           socket.send(
             JSON.stringify({
-              event: "message",
-              payload: { from: publicKeyForSocket, message },
+              type: "message",
+              payload: { from: publicKeyForSocket, message, certificate },
             }),
           );
         });
@@ -115,8 +115,8 @@ server.on("connection", (socket, request) => {
       resolvePeerHubSockets(to).map((socket) =>
         socket.send(
           JSON.stringify({
-            event: "relay",
-            payload: { to, from: publicKeyForSocket, message },
+            type: "relay",
+            payload: { to, from: publicKeyForSocket, message, certificate },
           }),
         ),
       );
