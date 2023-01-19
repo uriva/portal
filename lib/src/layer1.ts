@@ -21,6 +21,7 @@ interface InteriorToServer {
 export interface InteriorToExterior {
   from: PublicKey;
   payload: ClientMessage;
+  certificate: Certificate;
 }
 
 interface ServerToInterior {
@@ -108,7 +109,11 @@ export const connect = (
           socket.close();
           return;
         }
-        onMessage({ from, payload: JSON.parse(decryptedPayloadString) });
+        onMessage({
+          certificate: payload.certificate,
+          from,
+          payload: JSON.parse(decryptedPayloadString),
+        });
       }
     };
   });
