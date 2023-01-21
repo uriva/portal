@@ -1,10 +1,10 @@
-import WebSocketServer from "ws";
+import { WebSocketServer } from "ws";
 import cryptoRandomString from "crypto-random-string";
 
 const publicKeyToSocket = {};
 const hubIpToSocket = {};
 
-const server = new WebSocketServer({ port: 8080 });
+const server = new WebSocketServer({ port: 3000 });
 
 const validate = (publicKey, certificate) => {
   console.error("not implemented");
