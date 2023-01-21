@@ -1,6 +1,15 @@
-export type PublicKey = string;
-type PrivateKey = string;
-export type Certificate = string;
+import {
+  Certificate,
+  PrivateKey,
+  PublicKey,
+  certify,
+  decrypt,
+  encrypt,
+  validate,
+} from "./crypto";
+
+import WebSocket from "ws";
+
 type ClientMessage = any;
 
 interface ServerMessagePayload {
@@ -33,49 +42,19 @@ export interface ExteriorToInterior {
   to: PublicKey;
   payload: ClientMessage;
 }
-const encrypt = (
-  publicKey: PublicKey,
-  privateKey: PrivateKey,
-  payload: ClientMessage,
-): string => {
-  console.error("not yet implemented");
-  return "some encryped string";
-};
+export interface Parameters {
+  publicKey: PublicKey;
+  privateKey: PrivateKey;
+  onMessage: (message: InteriorToExterior) => void;
+  onClose: () => void;
+}
 
-const certify = (
-  publicKey: PublicKey,
-  privateKey: PrivateKey,
-  encryptedPayload: string,
-  to: PublicKey,
-): Certificate => {
-  console.error("not yet implemented");
-  return "some certificate";
-};
-
-const decrypt = (
-  publicKey: PublicKey,
-  privateKey: PrivateKey,
-  encrypedString: string,
-): string => {
-  console.error("not yet implemented");
-  return "some decryped string";
-};
-
-const validate = (
-  publicKey: PublicKey,
-  certificate: Certificate,
-  payload: string,
-): boolean => {
-  console.error("not yet implemented");
-  return true;
-};
-
-export const connect = (
-  publicKey: PublicKey,
-  privateKey: PrivateKey,
-  onMessage: (message: InteriorToExterior) => void,
-  onClose: () => void,
-): Promise<(message: ExteriorToInterior) => Certificate> =>
+export const connect = ({
+  publicKey,
+  privateKey,
+  onMessage,
+  onClose,
+}: Parameters): Promise<(message: ExteriorToInterior) => Certificate> =>
   new Promise((resolve) => {
     const socket = new WebSocket("wss://localhost:3000");
     socket.onopen = () => {

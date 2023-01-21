@@ -1,6 +1,6 @@
-import { unilateral } from "portal";
+import { connect } from "portal";
 
-const sendMessage = unilateral.client({ publicKey: "<server public key>" });
+const sendMessage = connect({ publicKey: "<server public key>" });
 
 try {
   await sendMessage("hello server, this is client speaking");

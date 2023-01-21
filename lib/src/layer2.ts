@@ -1,11 +1,5 @@
-import {
-  Certificate,
-  ExteriorToInterior,
-  InteriorToExterior,
-  PublicKey,
-  certify,
-  connect,
-} from "./layer1";
+import { Certificate, PublicKey } from "./crypto";
+import { ExteriorToInterior, InteriorToExterior, connect } from "./layer1";
 type ClientMessage = any;
 type ExteriorToClient = { from: PublicKey; payload: ClientMessage };
 type ClientToExterior = { to: PublicKey; payload: ClientMessage };
@@ -18,7 +12,7 @@ interface ClientMessageWithAcking {
   };
 }
 
-const connectWithAcking = async (
+export const connectWithAcking = async (
   publicKey: string,
   privateKey: string,
   onMessage: (message: ExteriorToClient) => Promise<void>,
@@ -43,12 +37,14 @@ const connectWithAcking = async (
       if (type === "message") {
         onMessage({ from: message.from, payload }).then(() => {
           const ackPayload: AckPayload = { certificate: message.certificate };
-          send({
+          const messageToInterior: ExteriorToInterior = {
             to: message.from,
             payload: {
               type: "ack",
               payload: ackPayload,
-          });
+            },
+          };
+          send(messageToInterior);
         });
       }
     },

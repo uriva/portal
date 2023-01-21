@@ -1,10 +1,10 @@
-import WebSocket from "ws";
+import { WebSocketServer } from "ws";
 import cryptoRandomString from "crypto-random-string";
 
 const publicKeyToSocket = {};
 const hubIpToSocket = {};
 
-const server = new WebSocket.Server({ port: 8080 });
+const server = new WebSocketServer({ port: 8080 });
 
 const conj = () => {};
 const has = () => {};
