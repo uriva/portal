@@ -1,4 +1,4 @@
-import { WebSocketServer } from "ws";
+import WebSocketServer from "ws";
 import cryptoRandomString from "crypto-random-string";
 
 const publicKeyToSocket = {};
@@ -6,17 +6,50 @@ const hubIpToSocket = {};
 
 const server = new WebSocketServer({ port: 8080 });
 
-const conj = () => {};
-const has = () => {};
-const remove = () => {};
-const isMeIP = () => {};
-const connectToHubSocket = () => {};
+const validate = (publicKey, certificate) => {
+  console.error("not implemented");
+  return true;
+};
 
-const redisAddToSet = () => {};
-const redisGetWithDefault = () => {};
-const redisRemoveFromSet = () => {};
+const conj = (arr, x) => [...arr, x];
+const has = (key, map) => key in map;
+const remove = (mapping, key) => {
+  const newMapping = { ...mapping };
+  delete newMapping[key];
+  return newMapping;
+};
+const isMeIP = (ip) => ip === myIP();
+const connectToHubSocket = (ip) => {
+  console.error("not yet implemented");
+};
 
-const recordForRateLimitingAndBilling = () => {};
+const myIP = () => {
+  console.error("not yet implemented");
+  return "1.1.1.1";
+};
+
+const redisAddToSet = (key, value) => {
+  console.error("not yet implemented");
+  return new Promise((resolve) => {
+    resolve(null);
+  });
+};
+const redisGetWithDefault = (defaultValue) => (key) => {
+  console.error("not implemented");
+  return [];
+};
+const redisRemoveFromSet = (key, value) => {
+  console.error("not implemented");
+};
+
+const recordForRateLimitingAndBilling = (sender, receiver) => {
+  console.error("not implemented");
+};
+
+const canSendMessage = (sender, receiver) => {
+  console.error("not implemented");
+  return true;
+};
 
 const resolvePeerHubSockets = (publicKey) =>
   redisGetWithDefault([])(publicKey).map((ip) => {
@@ -41,7 +74,7 @@ server.on("connection", (socket, request) => {
       publicKeyToSocket[publicKey] || [],
       socket,
     );
-    redisAddToSet(publicKey, myIP);
+    redisAddToSet(publicKey, myIP());
   };
   const challenge = cryptoRandomString({ length: 10 });
   socket.send(JSON.stringify({ type: "challenge", payload: challenge }));
@@ -50,8 +83,8 @@ server.on("connection", (socket, request) => {
       publicKeyToSocket[publicKeyForSocket] =
         publicKeyToSocket[publicKeyForSocket].length === 1
           ? []
-          : remove(publicKeyToSocket[publicKey], socket);
-      redisRemoveFromSet(publicKey, myIP);
+          : remove(publicKeyToSocket[publicKeyForSocket], socket);
+      redisRemoveFromSet(publicKeyForSocket, myIP());
       if (hubIpToSocket[ip] === socket) {
         socket.close();
         delete hubIpToSocket[ip];
@@ -61,8 +94,8 @@ server.on("connection", (socket, request) => {
   socket.on("message", (message) => {
     const { type, payload } = JSON.parse(message);
     if (type === "hub-id") {
-      const { certificate } = payload;
-      if (validate(hubsPublicKey, certificate, challenge)) {
+      const { certificate, hubPublicKey } = payload;
+      if (validate(hubPublicKey, certificate)) {
         if (has(hubIpToSocket, ip)) {
           hubIpToSocket[ip].close();
         }
@@ -88,7 +121,7 @@ server.on("connection", (socket, request) => {
     if (type === "id") {
       if (publicKeyForSocket) return; // A socket will serve only one publicKey until its death.
       const { publicKey, certificate } = payload;
-      if (validate(publicKey, certificate, challenge)) {
+      if (validate(publicKey, certificate)) {
         setSocketPublicKey(publicKey);
         socket.send(JSON.stringify({ type: "validated" }));
       } else {

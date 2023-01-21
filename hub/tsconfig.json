@@ -1,0 +1,26 @@
+{
+  "ts-node": {
+    "esm": true
+  },
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "",
+    "sourceMap": true,
+    "moduleResolution": "NodeNext",
+    "target": "es2021",
+    "lib": ["es2021", "DOM"],
+    "module": "node16",
+    "strict": false,
+    "declaration": true,
+    "declarationMap": true,
+    "composite": true,
+    "inlineSources": true,
+    "types": ["node"],
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
+  },
+  "include": ["./src/**/*.ts", "./test/**/*.ts", "./package.json"]
+}
