@@ -6,7 +6,7 @@ const hubIpToSocket = {};
 
 const server = new WebSocketServer({ port: 3000 });
 
-const validate = (publicKey, certificate) => {
+const validate = (publicKey, certificate, target) => {
   console.error("not implemented");
   return true;
 };
@@ -95,7 +95,7 @@ server.on("connection", (socket, request) => {
     const { type, payload } = JSON.parse(message);
     if (type === "hub-id") {
       const { certificate, hubPublicKey } = payload;
-      if (validate(hubPublicKey, certificate)) {
+      if (validate(hubPublicKey, certificate, hubPublicKey)) {
         if (has(hubIpToSocket, ip)) {
           hubIpToSocket[ip].close();
         }
@@ -121,7 +121,7 @@ server.on("connection", (socket, request) => {
     if (type === "id") {
       if (publicKeyForSocket) return; // A socket will serve only one publicKey until its death.
       const { publicKey, certificate } = payload;
-      if (validate(publicKey, certificate)) {
+      if (validate(publicKey, certificate, challenge)) {
         setSocketPublicKey(publicKey);
         socket.send(JSON.stringify({ type: "validated" }));
       } else {

@@ -19,10 +19,10 @@ export const connectWithAcking = async (
   onClose: () => void,
 ): Promise<(message: ClientToExterior) => Promise<void>> => {
   const acks = new Map<Certificate, () => void>();
-  const send = await connect(
+  const send = await connect({
     publicKey,
     privateKey,
-    (message: InteriorToExterior) => {
+    onMessage: (message: InteriorToExterior) => {
       const { type, payload }: ClientMessageWithAcking = message.payload;
       if (type === "ack") {
         const ackPayload: AckPayload = payload.payload;
@@ -49,7 +49,7 @@ export const connectWithAcking = async (
       }
     },
     onClose,
-  );
+  });
   return (message: ClientToExterior) =>
     new Promise((resolve) => {
       acks.set(send(message), resolve);

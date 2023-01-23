@@ -25,7 +25,6 @@ export const certify = (
   publicKey: PublicKey,
   privateKey: PrivateKey,
   encryptedPayload: string,
-  to: PublicKey,
 ): Certificate => {
   console.error("not yet implemented");
   return "some certificate";

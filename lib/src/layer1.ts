@@ -12,12 +12,6 @@ import WebSocket from "ws";
 
 type ClientMessage = any;
 
-interface ServerMessagePayload {
-  certificate: Certificate;
-  from: PublicKey;
-  payload: ClientMessage;
-}
-
 interface InteriorToServer {
   type: string;
   payload: {
@@ -32,10 +26,20 @@ export interface InteriorToExterior {
   payload: ClientMessage;
   certificate: Certificate;
 }
+interface ServerChallengeMessage {
+  type: "challenge";
+  payload: {
+    challenge: string;
+  };
+}
 
-interface ServerToInterior {
-  type: string;
-  payload: ServerMessagePayload;
+interface ServerRegularMessage {
+  type: "message";
+  payload: {
+    certificate: Certificate;
+    to: PublicKey;
+    payload: ClientMessage;
+  };
 }
 
 export interface ExteriorToInterior {
@@ -48,6 +52,7 @@ export interface Parameters {
   onMessage: (message: InteriorToExterior) => void;
   onClose: () => void;
 }
+type ServerMessage = ServerChallengeMessage | ServerRegularMessage;
 
 export const connect = ({
   publicKey,
@@ -56,12 +61,17 @@ export const connect = ({
   onClose,
 }: Parameters): Promise<(message: ExteriorToInterior) => Certificate> =>
   new Promise((resolve) => {
-    const socket = new WebSocket("wss://localhost:3000");
+    const socket = new WebSocket("ws://localhost:3000");
     socket.onopen = () => {
+      console.log("socket opened");
       resolve(({ payload, to }: ExteriorToInterior) => {
         const encrypedPayload = encrypt(publicKey, privateKey, payload);
-        const certificate = certify(publicKey, privateKey, encrypedPayload, to);
-        const toSend: InteriorToServer = {
+        const certificate = certify(
+          publicKey,
+          privateKey,
+          JSON.stringify({ payload: encrypedPayload, to }),
+        );
+        const toSend: ServerRegularMessage = {
           type: "message",
           payload: {
             to,
@@ -76,23 +86,36 @@ export const connect = ({
     };
     socket.onclose = onClose;
     socket.onmessage = ({ data }) => {
-      const message: ServerToInterior = JSON.parse(data);
-      if (message.type === "message") {
-        const { from, payload } = message.payload;
-        const decryptedPayloadString = decrypt(
-          publicKey,
-          privateKey,
-          payload.payload,
-        );
-        if (!validate(from, payload.certificate, decryptedPayloadString)) {
-          socket.close();
+      const message: ServerMessage = JSON.parse(data);
+      switch (message.type) {
+        case "challenge": {
+          const { challenge } = message.payload;
+          socket.send(
+            JSON.stringify({
+              publicKey,
+              certificate: certify(publicKey, privateKey, challenge),
+            }),
+          );
           return;
         }
-        onMessage({
-          certificate: payload.certificate,
-          from,
-          payload: JSON.parse(decryptedPayloadString),
-        });
+        case "message": {
+          const { from, payload } = message.payload;
+          const decryptedPayloadString = decrypt(
+            publicKey,
+            privateKey,
+            payload.payload,
+          );
+          if (!validate(from, payload.certificate, decryptedPayloadString)) {
+            socket.close();
+            return;
+          }
+          onMessage({
+            certificate: payload.certificate,
+            from,
+            payload: JSON.parse(decryptedPayloadString),
+          });
+          return;
+        }
       }
     };
   });
