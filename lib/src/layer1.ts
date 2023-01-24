@@ -15,7 +15,6 @@ const { certify, decrypt, encrypt, validate } = crypto;
 export interface InteriorToExterior {
   from: PublicKey;
   payload: ClientMessage;
-  certificate: Certificate;
 }
 
 export interface Parameters {
@@ -93,7 +92,6 @@ export const connect = ({
             return;
           }
           onMessage({
-            certificate: payload.certificate,
             from,
             payload: JSON.parse(decryptedPayloadString),
           });
