@@ -37,6 +37,7 @@ interface ServerRegularMessage {
   type: "message";
   payload: {
     certificate: Certificate;
+    from: PublicKey;
     to: PublicKey;
     payload: ClientMessage;
   };
@@ -75,6 +76,7 @@ export const connect = ({
           type: "message",
           payload: {
             to,
+            from: publicKey,
             payload: encrypedPayload,
             certificate,
           },
@@ -99,13 +101,13 @@ export const connect = ({
           return;
         }
         case "message": {
-          const { from, payload } = message.payload;
+          const { from, payload, certificate } = message.payload;
           const decryptedPayloadString = decrypt(
             publicKey,
             privateKey,
             payload.payload,
           );
-          if (!validate(from, payload.certificate, decryptedPayloadString)) {
+          if (!validate(from, certificate, decryptedPayloadString)) {
             socket.close();
             return;
           }
