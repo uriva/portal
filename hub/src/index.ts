@@ -1,18 +1,17 @@
-import { Certificate, PublicKey } from "shared/src/crypto.js";
-import {
-  ClientLibToServer,
-  NotValidatedMessage,
-  RegularMessagePayload,
-  ServerChallengeMessage,
-  ServerRegularMessage,
-  ValidatedMessage,
-} from "shared/src/types.js";
+import { crypto, types } from "shared";
 
 import { WebSocketServer } from "ws";
 import cryptoRandomString from "crypto-random-string";
-import shared from "shared";
 
-const { crypto, types } = shared;
+type ClientLibToServer = types.ClientLibToServer;
+type NotValidatedMessage = types.NotValidatedMessage;
+type RegularMessagePayload = types.RegularMessagePayload;
+type ServerChallengeMessage = types.ServerChallengeMessage;
+type ServerRegularMessage = types.ServerRegularMessage;
+type ValidatedMessage = types.ValidatedMessage;
+
+type Certificate = crypto.Certificate;
+type PublicKey = crypto.PublicKey;
 
 type RelayMessage = {
   type: "relay";

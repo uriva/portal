@@ -1,7 +1,8 @@
-import { ClientMessage, RegularMessagePayload } from "shared/src/types";
 import { InteriorToExterior, connect } from "./layer1";
+import { crypto, types } from "shared";
 
-import { crypto } from "shared";
+type ClientMessage = types.ClientMessage;
+type RegularMessagePayload = types.RegularMessagePayload;
 
 type PublicKey = crypto.PublicKey;
 type Certificate = crypto.Certificate;

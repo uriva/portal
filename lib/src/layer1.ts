@@ -1,10 +1,10 @@
 import { crypto, types } from "shared";
 
-import { ClientLibToServer } from "shared/src/types";
 import WebSocket from "ws";
 
 type ServerMessage = types.ServerMessage;
 type ClientMessage = types.ClientMessage;
+type ClientLibToServer = types.ClientLibToServer;
 
 type PublicKey = crypto.PublicKey;
 type Certificate = crypto.Certificate;
