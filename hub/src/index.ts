@@ -1,15 +1,11 @@
 import { WebSocketServer } from "ws";
+import { crypto } from "shared";
 import cryptoRandomString from "crypto-random-string";
 
 const publicKeyToSocket = {};
 const hubIpToSocket = {};
 
 const server = new WebSocketServer({ port: 3000 });
-
-const validate = (publicKey, certificate, target) => {
-  console.error("not implemented");
-  return true;
-};
 
 const conj = (arr, x) => [...arr, x];
 const has = (map, key) => key in map;
@@ -95,7 +91,7 @@ server.on("connection", (socket, request) => {
     const { type, payload } = JSON.parse(message);
     if (type === "hub-id") {
       const { certificate, hubPublicKey } = payload;
-      if (validate(hubPublicKey, certificate, hubPublicKey)) {
+      if (crypto.validate(hubPublicKey, certificate, hubPublicKey)) {
         if (has(hubIpToSocket, ip)) {
           hubIpToSocket[ip].close();
         }
@@ -119,7 +115,7 @@ server.on("connection", (socket, request) => {
       if (publicKeyForSocket) return; // A socket will serve only one publicKey until its death.
       const { publicKey, certificate } = payload;
       console.log("identifying client");
-      if (validate(publicKey, certificate, challenge)) {
+      if (crypto.validate(publicKey, certificate, challenge)) {
         setSocketPublicKey(publicKey);
         socket.send(JSON.stringify({ type: "validated" }));
       } else {

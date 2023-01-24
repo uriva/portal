@@ -1,5 +1,10 @@
-import { Certificate, PublicKey } from "./crypto";
 import { ExteriorToInterior, InteriorToExterior, connect } from "./layer1";
+
+import { crypto } from "shared";
+
+type PublicKey = crypto.PublicKey;
+type Certificate = crypto.Certificate;
+
 type ClientMessage = any;
 type ExteriorToClient = { from: PublicKey; payload: ClientMessage };
 type ClientToExterior = { to: PublicKey; payload: ClientMessage };

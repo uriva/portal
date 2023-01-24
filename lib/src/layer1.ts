@@ -1,48 +1,23 @@
+import { crypto, types } from "shared";
+
 import WebSocket from "ws";
-import { crypto } from "shared";
 
-const {
-  Certificate,
-  PrivateKey,
-  PublicKey,
-  certify,
-  decrypt,
-  encrypt,
-  validate,
-} = crypto;
+type ServerMessage = types.ServerMessage;
+type ClientMessage = types.ClientMessage;
+type ServerRegularMessage = types.ServerRegularMessage;
 
-type ClientMessage = any;
+type PublicKey = crypto.PublicKey;
+type Certificate = crypto.Certificate;
+type PrivateKey = crypto.PrivateKey;
+
+const { certify, decrypt, encrypt, validate } = crypto;
 
 export interface InteriorToExterior {
   from: PublicKey;
   payload: ClientMessage;
   certificate: Certificate;
 }
-interface ServerChallengeMessage {
-  type: "challenge";
-  payload: {
-    challenge: string;
-  };
-}
 
-interface ValidatedMessage {
-  type: "validated";
-}
-
-interface ServerRegularMessage {
-  type: "message";
-  payload: {
-    certificate: Certificate;
-    from: PublicKey;
-    to: PublicKey;
-    payload: ClientMessage;
-  };
-}
-
-export interface ExteriorToInterior {
-  to: PublicKey;
-  payload: ClientMessage;
-}
 export interface Parameters {
   publicKey: PublicKey;
   privateKey: PrivateKey;
@@ -50,10 +25,10 @@ export interface Parameters {
   onClose: () => void;
 }
 
-type ServerMessage =
-  | ValidatedMessage
-  | ServerChallengeMessage
-  | ServerRegularMessage;
+export interface ExteriorToInterior {
+  to: PublicKey;
+  payload: ClientMessage;
+}
 
 export const connect = ({
   publicKey,
