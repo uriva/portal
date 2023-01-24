@@ -1,10 +1,10 @@
 import { crypto, types } from "shared";
 
+import { ClientLibToServer } from "shared/src/types";
 import WebSocket from "ws";
 
 type ServerMessage = types.ServerMessage;
 type ClientMessage = types.ClientMessage;
-type ServerRegularMessage = types.ServerRegularMessage;
 
 type PublicKey = crypto.PublicKey;
 type Certificate = crypto.Certificate;
@@ -25,7 +25,7 @@ export interface Parameters {
   onClose: () => void;
 }
 
-export interface ExteriorToInterior {
+interface ClientToLib {
   to: PublicKey;
   payload: ClientMessage;
 }
@@ -35,9 +35,11 @@ export const connect = ({
   privateKey,
   onMessage,
   onClose,
-}: Parameters): Promise<(message: ExteriorToInterior) => Certificate> =>
+}: Parameters): Promise<(message: ClientToLib) => Certificate> =>
   new Promise((resolve) => {
     const socket = new WebSocket("ws://localhost:3000");
+    const sendThroughSocket = (x: ClientLibToServer) =>
+      socket.send(JSON.stringify(x));
     socket.onopen = () => {
       console.log("socket opened");
     };
@@ -46,14 +48,14 @@ export const connect = ({
       const message: ServerMessage = JSON.parse(data.toString());
       switch (message.type) {
         case "validated": {
-          resolve(({ payload, to }: ExteriorToInterior) => {
+          resolve(({ payload, to }: ClientToLib) => {
             const encryptedPayload = encrypt(publicKey, privateKey, payload);
             const certificate = certify(
               publicKey,
               privateKey,
               JSON.stringify({ payload: encryptedPayload, to }),
             );
-            const toSend: ServerRegularMessage = {
+            sendThroughSocket({
               type: "message",
               payload: {
                 to,
@@ -61,8 +63,7 @@ export const connect = ({
                 payload: encryptedPayload,
                 certificate,
               },
-            };
-            socket.send(JSON.stringify(toSend));
+            });
             // The message certificate acts as a guid.
             return certificate;
           });
@@ -70,15 +71,13 @@ export const connect = ({
         }
         case "challenge": {
           const { challenge } = message.payload;
-          socket.send(
-            JSON.stringify({
-              type: "id",
-              payload: {
-                publicKey,
-                certificate: certify(publicKey, privateKey, challenge),
-              },
-            }),
-          );
+          sendThroughSocket({
+            type: "id",
+            payload: {
+              publicKey,
+              certificate: certify(publicKey, privateKey, challenge),
+            },
+          });
           return;
         }
         case "message": {

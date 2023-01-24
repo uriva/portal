@@ -7,6 +7,14 @@ export interface ServerChallengeMessage {
   };
 }
 
+export interface ClientIdentificationMessage {
+  type: "id";
+  payload: {
+    publicKey: PublicKey;
+    certificate: Certificate;
+  };
+}
+
 export interface ValidatedMessage {
   type: "validated";
 }
@@ -33,3 +41,7 @@ export type ServerMessage =
   | ValidatedMessage
   | ServerChallengeMessage
   | ServerRegularMessage;
+
+export type ClientLibToServer =
+  | ServerRegularMessage
+  | ClientIdentificationMessage;

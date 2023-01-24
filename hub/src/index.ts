@@ -1,4 +1,6 @@
+import { Certificate, PublicKey } from "shared/src/crypto.js";
 import {
+  ClientLibToServer,
   NotValidatedMessage,
   RegularMessagePayload,
   ServerChallengeMessage,
@@ -16,6 +18,16 @@ type RelayMessage = {
   type: "relay";
   payload: RegularMessagePayload;
 };
+
+type HubIdMessage = {
+  type: "hub-id";
+  payload: {
+    hubPublicKey: PublicKey;
+    certificate: Certificate;
+  };
+};
+
+type HubToHubMessage = RelayMessage | HubIdMessage;
 
 type ServerOutgoingMessage =
   | ServerRegularMessage
@@ -112,7 +124,8 @@ server.on("connection", (socket, request) => {
     }
   });
   socket.on("message", (message) => {
-    const { type, payload } = JSON.parse(message);
+    const { type, payload }: ClientLibToServer | HubToHubMessage =
+      JSON.parse(message);
     if (type === "hub-id") {
       const { certificate, hubPublicKey } = payload;
       if (crypto.validate(hubPublicKey, certificate, hubPublicKey)) {
