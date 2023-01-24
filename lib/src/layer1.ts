@@ -47,18 +47,18 @@ export const connect = ({
       switch (message.type) {
         case "validated": {
           resolve(({ payload, to }: ExteriorToInterior) => {
-            const encrypedPayload = encrypt(publicKey, privateKey, payload);
+            const encryptedPayload = encrypt(publicKey, privateKey, payload);
             const certificate = certify(
               publicKey,
               privateKey,
-              JSON.stringify({ payload: encrypedPayload, to }),
+              JSON.stringify({ payload: encryptedPayload, to }),
             );
             const toSend: ServerRegularMessage = {
               type: "message",
               payload: {
                 to,
                 from: publicKey,
-                payload: encrypedPayload,
+                payload: encryptedPayload,
                 certificate,
               },
             };

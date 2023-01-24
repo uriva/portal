@@ -11,16 +11,22 @@ export interface ValidatedMessage {
   type: "validated";
 }
 
+export interface NotValidatedMessage {
+  type: "bad-auth";
+}
+
 export type ClientMessage = any;
+
+export interface RegularMessagePayload {
+  certificate: Certificate;
+  from: PublicKey;
+  to: PublicKey;
+  payload: ClientMessage;
+}
 
 export interface ServerRegularMessage {
   type: "message";
-  payload: {
-    certificate: Certificate;
-    from: PublicKey;
-    to: PublicKey;
-    payload: ClientMessage;
-  };
+  payload: RegularMessagePayload;
 }
 
 export type ServerMessage =

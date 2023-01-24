@@ -1,6 +1,28 @@
+import {
+  NotValidatedMessage,
+  RegularMessagePayload,
+  ServerChallengeMessage,
+  ServerRegularMessage,
+  ValidatedMessage,
+} from "shared/src/types.js";
+
 import { WebSocketServer } from "ws";
-import { crypto } from "shared";
 import cryptoRandomString from "crypto-random-string";
+import shared from "shared";
+
+const { crypto, types } = shared;
+
+type RelayMessage = {
+  type: "relay";
+  payload: RegularMessagePayload;
+};
+
+type ServerOutgoingMessage =
+  | ServerRegularMessage
+  | ServerChallengeMessage
+  | ValidatedMessage
+  | RelayMessage
+  | NotValidatedMessage;
 
 const publicKeyToSocket = {};
 const hubIpToSocket = {};
@@ -61,6 +83,8 @@ const resolvePeerHubSockets = (publicKey) =>
 
 // Incoming connections might be from a client or another hub.
 server.on("connection", (socket, request) => {
+  const sendMessageToClient = (message: ServerOutgoingMessage) =>
+    socket.send(JSON.stringify(message));
   let publicKeyForSocket = null;
   let isPeerHub = false;
   const ip = request.socket.remoteAddress;
@@ -68,12 +92,12 @@ server.on("connection", (socket, request) => {
     publicKeyForSocket = publicKey;
     publicKeyToSocket[publicKey] = conj(
       publicKeyToSocket[publicKey] || [],
-      socket,
+      sendMessageToClient,
     );
     redisAddToSet(publicKey, myIP());
   };
   const challenge = cryptoRandomString({ length: 10 });
-  socket.send(JSON.stringify({ type: "challenge", payload: challenge }));
+  sendMessageToClient({ type: "challenge", payload: { challenge } });
   socket.on("close", () => {
     if (publicKeyForSocket) {
       publicKeyToSocket[publicKeyForSocket] =
@@ -97,9 +121,9 @@ server.on("connection", (socket, request) => {
         }
         hubIpToSocket[ip] = socket;
         isPeerHub = true;
-        socket.send(JSON.stringify({ type: "hub-validated" }));
+        sendMessageToClient({ type: "validated" });
       } else {
-        socket.send(JSON.stringify({ type: "bad-hub-auth" }));
+        sendMessageToClient({ type: "bad-auth" });
       }
     }
     if (type === "relay") {
@@ -117,14 +141,14 @@ server.on("connection", (socket, request) => {
       console.log("identifying client");
       if (crypto.validate(publicKey, certificate, challenge)) {
         setSocketPublicKey(publicKey);
-        socket.send(JSON.stringify({ type: "validated" }));
+        sendMessageToClient({ type: "validated" });
       } else {
-        socket.send(JSON.stringify({ type: "bad-auth" }));
+        sendMessageToClient({ type: "bad-auth" });
       }
     }
     if (type === "message") {
       if (!publicKeyForSocket) return; // Unauthenticated sockets are not to be used.
-      const { to, message, certificate, from } = payload;
+      const { to, certificate, from } = payload;
       if (from !== publicKeyForSocket) return;
       if (!canSendMessage(publicKeyForSocket, to)) {
         return;
@@ -132,22 +156,23 @@ server.on("connection", (socket, request) => {
       recordForRateLimitingAndBilling(publicKeyForSocket, to);
       console.log("processing message", payload);
       if (has(publicKeyToSocket, to)) {
-        publicKeyToSocket[to].map((socket) => {
-          socket.send(
-            JSON.stringify({
-              type: "message",
-              payload: { from: publicKeyForSocket, message, certificate },
-            }),
-          );
+        publicKeyToSocket[to].forEach((sendMessageToClient) => {
+          sendMessageToClient({
+            type: "message",
+            payload,
+          });
         });
       }
       resolvePeerHubSockets(to).map((socket) =>
-        socket.send(
-          JSON.stringify({
-            type: "relay",
-            payload: { to, from: publicKeyForSocket, message, certificate },
-          }),
-        ),
+        sendMessageToClient({
+          type: "relay",
+          payload: {
+            to,
+            from: publicKeyForSocket,
+            payload: payload.payload,
+            certificate,
+          },
+        }),
       );
     }
   });

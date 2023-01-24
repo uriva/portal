@@ -1,12 +1,15 @@
 {
+  "ts-node": {
+    "esm": true
+  },
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "",
     "sourceMap": true,
-    "moduleResolution": "node",
+    "moduleResolution": "NodeNext",
     "target": "es2021",
     "lib": ["es2021", "DOM"],
-    "module": "commonjs",
+    "module": "node16",
     "strict": false,
     "declaration": true,
     "declarationMap": true,

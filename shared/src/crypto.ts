@@ -18,7 +18,7 @@ export const encrypt = (
   message: string,
 ): string => {
   console.error("not yet implemented");
-  return "some encryped string";
+  return "some encrypted string";
 };
 
 export const certify = (
@@ -33,10 +33,10 @@ export const certify = (
 export const decrypt = (
   publicKey: PublicKey,
   privateKey: PrivateKey,
-  encrypedString: string,
+  encryptedString: string,
 ): string => {
   console.error("not yet implemented");
-  return "some decryped string";
+  return "some decrypted string";
 };
 
 export const validate = (
