@@ -12,7 +12,7 @@ const validate = (publicKey, certificate, target) => {
 };
 
 const conj = (arr, x) => [...arr, x];
-const has = (key, map) => key in map;
+const has = (map, key) => key in map;
 const remove = (mapping, key) => {
   const newMapping = { ...mapping };
   delete newMapping[key];
@@ -106,21 +106,19 @@ server.on("connection", (socket, request) => {
         socket.send(JSON.stringify({ type: "bad-hub-auth" }));
       }
     }
-
     if (type === "relay") {
       if (!isPeerHub) return;
-      const { to, from, message } = payload;
-      publicKeyForSocket[to].send(
+      publicKeyForSocket[payload.to].send(
         JSON.stringify({
           type: "message",
-          payload: { from, message },
+          payload,
         }),
       );
     }
-
     if (type === "id") {
       if (publicKeyForSocket) return; // A socket will serve only one publicKey until its death.
       const { publicKey, certificate } = payload;
+      console.log("identifying client");
       if (validate(publicKey, certificate, challenge)) {
         setSocketPublicKey(publicKey);
         socket.send(JSON.stringify({ type: "validated" }));
@@ -136,6 +134,7 @@ server.on("connection", (socket, request) => {
         return;
       }
       recordForRateLimitingAndBilling(publicKeyForSocket, to);
+      console.log("processing message", payload);
       if (has(publicKeyToSocket, to)) {
         publicKeyToSocket[to].map((socket) => {
           socket.send(

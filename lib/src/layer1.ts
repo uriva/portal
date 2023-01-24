@@ -1,4 +1,7 @@
-import {
+import WebSocket from "ws";
+import { crypto } from "shared";
+
+const {
   Certificate,
   PrivateKey,
   PublicKey,
@@ -6,9 +9,7 @@ import {
   decrypt,
   encrypt,
   validate,
-} from "./crypto";
-
-import WebSocket from "ws";
+} = crypto;
 
 type ClientMessage = any;
 
@@ -22,6 +23,10 @@ interface ServerChallengeMessage {
   payload: {
     challenge: string;
   };
+}
+
+interface ValidatedMessage {
+  type: "validated";
 }
 
 interface ServerRegularMessage {
@@ -44,7 +49,11 @@ export interface Parameters {
   onMessage: (message: InteriorToExterior) => void;
   onClose: () => void;
 }
-type ServerMessage = ServerChallengeMessage | ServerRegularMessage;
+
+type ServerMessage =
+  | ValidatedMessage
+  | ServerChallengeMessage
+  | ServerRegularMessage;
 
 export const connect = ({
   publicKey,
@@ -56,47 +65,54 @@ export const connect = ({
     const socket = new WebSocket("ws://localhost:3000");
     socket.onopen = () => {
       console.log("socket opened");
-      resolve(({ payload, to }: ExteriorToInterior) => {
-        const encrypedPayload = encrypt(publicKey, privateKey, payload);
-        const certificate = certify(
-          publicKey,
-          privateKey,
-          JSON.stringify({ payload: encrypedPayload, to }),
-        );
-        const toSend: ServerRegularMessage = {
-          type: "message",
-          payload: {
-            to,
-            from: publicKey,
-            payload: encrypedPayload,
-            certificate,
-          },
-        };
-        socket.send(JSON.stringify(toSend));
-        // The message certificate acts as a guid.
-        return certificate;
-      });
     };
     socket.onclose = onClose;
     socket.onmessage = ({ data }) => {
       const message: ServerMessage = JSON.parse(data.toString());
       switch (message.type) {
+        case "validated": {
+          resolve(({ payload, to }: ExteriorToInterior) => {
+            const encrypedPayload = encrypt(publicKey, privateKey, payload);
+            const certificate = certify(
+              publicKey,
+              privateKey,
+              JSON.stringify({ payload: encrypedPayload, to }),
+            );
+            const toSend: ServerRegularMessage = {
+              type: "message",
+              payload: {
+                to,
+                from: publicKey,
+                payload: encrypedPayload,
+                certificate,
+              },
+            };
+            socket.send(JSON.stringify(toSend));
+            // The message certificate acts as a guid.
+            return certificate;
+          });
+          return;
+        }
         case "challenge": {
           const { challenge } = message.payload;
           socket.send(
             JSON.stringify({
-              publicKey,
-              certificate: certify(publicKey, privateKey, challenge),
+              type: "id",
+              payload: {
+                publicKey,
+                certificate: certify(publicKey, privateKey, challenge),
+              },
             }),
           );
           return;
         }
         case "message": {
           const { from, payload, certificate } = message.payload;
+          console.log(payload);
           const decryptedPayloadString = decrypt(
             publicKey,
             privateKey,
-            payload.payload,
+            payload,
           );
           if (!validate(from, certificate, decryptedPayloadString)) {
             socket.close();
