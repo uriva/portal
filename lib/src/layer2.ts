@@ -5,7 +5,7 @@ type ClientMessage = types.ClientMessage;
 type RegularMessagePayload = types.RegularMessagePayload;
 
 type PublicKey = crypto.PublicKey;
-type Certificate = crypto.Certificate;
+type Certificate = crypto.Signature;
 
 type ExteriorToClient = { from: PublicKey; payload: ClientMessage };
 type ClientToExterior = { to: PublicKey; payload: ClientMessage };

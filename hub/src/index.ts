@@ -11,7 +11,7 @@ type ServerChallengeMessage = types.ServerChallengeMessage;
 type ServerRegularMessage = types.ServerRegularMessage;
 type ValidatedMessage = types.ValidatedMessage;
 
-type Certificate = crypto.Certificate;
+type Certificate = crypto.Signature;
 type PublicKey = crypto.PublicKey;
 
 type RelayMessage = {

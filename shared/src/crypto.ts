@@ -1,56 +1,41 @@
+import * as crypto from "crypto";
+
+const { publicEncrypt, generateKeyPairSync, randomBytes } = crypto;
+
 export type PrivateKey = string;
 export type PublicKey = string;
-export type Certificate = string;
+export type Signature = string;
 export interface KeyPair {
   publicKey: PublicKey;
   privateKey: PrivateKey;
 }
-export const genKeyPair: () => KeyPair = () => {
-  console.error("not implemented");
-  const publicKey: PublicKey = "some public key";
-  const privateKey: PrivateKey = "some private key";
-  return { publicKey, privateKey };
-};
+export const genKeyPair: () => KeyPair = () =>
+  generateKeyPairSync("rsa", {
+    modulusLength: 4096,
+    publicKeyEncoding: {
+      type: "pkcs1",
+      format: "pem",
+    },
+    privateKeyEncoding: {
+      type: "pkcs1",
+      format: "pem",
+    },
+  });
 
-const suffix = "supposedly encryped";
+export const encrypt = (publicKey: PublicKey, str: string): string =>
+  publicEncrypt(publicKey, Buffer.from(str)).toString();
 
-export const encrypt = (
+export const decrypt = (privateKey: PrivateKey, str: string): string =>
+  crypto.privateDecrypt(privateKey, Buffer.from(str)).toString();
+
+export const sign = (privateKey: PrivateKey, str: string): Signature =>
+  crypto.sign(null, Buffer.from(str), privateKey).toString();
+
+export const verify = (
   publicKey: PublicKey,
-  privateKey: PrivateKey,
-  message: string,
-): string => {
-  console.error("not implemented");
-  return message + suffix;
-};
+  signature: Signature,
+  str: string,
+): boolean =>
+  crypto.verify(null, Buffer.from(str), publicKey, Buffer.from(signature));
 
-export const certify = (
-  publicKey: PublicKey,
-  privateKey: PrivateKey,
-  encryptedPayload: string,
-): Certificate => {
-  console.error("not implemented");
-  return "some certificate";
-};
-
-export const decrypt = (
-  publicKey: PublicKey,
-  privateKey: PrivateKey,
-  encryptedString: string,
-): string => {
-  console.error("not implemented");
-  return encryptedString.slice(0, encrypt.length - suffix.length);
-};
-
-export const validate = (
-  publicKey: PublicKey,
-  certificate: Certificate,
-  payload: string,
-): boolean => {
-  console.error("not implemented");
-  return true;
-};
-
-export const randomString = () => {
-  console.error("not implemented");
-  return "0123456789";
-};
+export const randomString = () => randomBytes(64).toString("hex");

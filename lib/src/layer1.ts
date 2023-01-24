@@ -7,7 +7,7 @@ type ClientMessage = types.ClientMessage;
 type ClientLibToServer = types.ClientLibToServer;
 
 type PublicKey = crypto.PublicKey;
-type Certificate = crypto.Certificate;
+type Certificate = crypto.Signature;
 type PrivateKey = crypto.PrivateKey;
 
 const { certify, decrypt, encrypt, validate } = crypto;
