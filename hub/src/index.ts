@@ -1,7 +1,8 @@
 import { crypto, types } from "shared";
 
 import { WebSocketServer } from "ws";
-import cryptoRandomString from "crypto-random-string";
+
+const { randomString } = crypto;
 
 type ClientLibToServer = types.ClientLibToServer;
 type NotValidatedMessage = types.NotValidatedMessage;
@@ -107,7 +108,7 @@ server.on("connection", (socket, request) => {
     );
     redisAddToSet(publicKey, myIP());
   };
-  const challenge = cryptoRandomString({ length: 10 });
+  const challenge = randomString();
   sendMessageToClient({ type: "challenge", payload: { challenge } });
   socket.on("close", () => {
     if (publicKeyForSocket) {

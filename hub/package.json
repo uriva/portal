@@ -8,9 +8,7 @@
   },
   "author": "",
   "license": "ISC",
-  "type": "module",
   "dependencies": {
-    "crypto-random-string": "^5.0.0",
     "shared": "file:../shared",
     "ws": "^8.11.0"
   },

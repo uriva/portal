@@ -36,7 +36,7 @@ export const decrypt = (
   encryptedString: string,
 ): string => {
   console.error("not yet implemented");
-  return "\"some decrypted json\"";
+  return '"some decrypted json"';
 };
 
 export const validate = (
@@ -46,4 +46,9 @@ export const validate = (
 ): boolean => {
   console.error("not yet implemented");
   return true;
+};
+
+export const randomString = () => {
+  console.error("not yet implemented");
+  return "0123456789";
 };
