@@ -79,7 +79,7 @@ export const connect = ({
     };
     socket.onclose = onClose;
     socket.onmessage = ({ data }) => {
-      const message: ServerMessage = JSON.parse(data);
+      const message: ServerMessage = JSON.parse(data.toString());
       switch (message.type) {
         case "challenge": {
           const { challenge } = message.payload;
