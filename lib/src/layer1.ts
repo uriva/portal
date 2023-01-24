@@ -12,15 +12,6 @@ import WebSocket from "ws";
 
 type ClientMessage = any;
 
-interface InteriorToServer {
-  type: string;
-  payload: {
-    to: PublicKey;
-    certificate: Certificate;
-    payload: ClientMessage;
-  };
-}
-
 export interface InteriorToExterior {
   from: PublicKey;
   payload: ClientMessage;
