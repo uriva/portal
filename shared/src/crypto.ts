@@ -7,10 +7,12 @@ export interface KeyPair {
 }
 export const genKeyPair: () => KeyPair = () => {
   console.error("not implemented");
-  const publicKey: PublicKey = "hello i am a public key";
-  const privateKey: PrivateKey = "hello i'm a private key";
+  const publicKey: PublicKey = "some public key";
+  const privateKey: PrivateKey = "some private key";
   return { publicKey, privateKey };
 };
+
+const suffix = "supposedly encryped";
 
 export const encrypt = (
   publicKey: PublicKey,
@@ -18,7 +20,7 @@ export const encrypt = (
   message: string,
 ): string => {
   console.error("not implemented");
-  return "some encrypted string";
+  return message + suffix;
 };
 
 export const certify = (
@@ -36,7 +38,7 @@ export const decrypt = (
   encryptedString: string,
 ): string => {
   console.error("not implemented");
-  return '"some decrypted json"';
+  return encryptedString.slice(0, encrypt.length - suffix.length);
 };
 
 export const validate = (
