@@ -6,7 +6,7 @@ export interface KeyPair {
   privateKey: PrivateKey;
 }
 export const genKeyPair: () => KeyPair = () => {
-  console.error("not yet implemented");
+  console.error("not implemented");
   const publicKey: PublicKey = "hello i am a public key";
   const privateKey: PrivateKey = "hello i'm a private key";
   return { publicKey, privateKey };
@@ -17,7 +17,7 @@ export const encrypt = (
   privateKey: PrivateKey,
   message: string,
 ): string => {
-  console.error("not yet implemented");
+  console.error("not implemented");
   return "some encrypted string";
 };
 
@@ -26,7 +26,7 @@ export const certify = (
   privateKey: PrivateKey,
   encryptedPayload: string,
 ): Certificate => {
-  console.error("not yet implemented");
+  console.error("not implemented");
   return "some certificate";
 };
 
@@ -35,7 +35,7 @@ export const decrypt = (
   privateKey: PrivateKey,
   encryptedString: string,
 ): string => {
-  console.error("not yet implemented");
+  console.error("not implemented");
   return '"some decrypted json"';
 };
 
@@ -44,11 +44,11 @@ export const validate = (
   certificate: Certificate,
   payload: string,
 ): boolean => {
-  console.error("not yet implemented");
+  console.error("not implemented");
   return true;
 };
 
 export const randomString = () => {
-  console.error("not yet implemented");
+  console.error("not implemented");
   return "0123456789";
 };
