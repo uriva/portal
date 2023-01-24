@@ -130,7 +130,8 @@ server.on("connection", (socket, request) => {
     }
     if (type === "message") {
       if (!publicKeyForSocket) return; // Unauthenticated sockets are not to be used.
-      const { to, message, certificate } = payload;
+      const { to, message, certificate, from } = payload;
+      if (from !== publicKeyForSocket) return;
       if (!canSendMessage(publicKeyForSocket, to)) {
         return;
       }
