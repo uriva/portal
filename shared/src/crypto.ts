@@ -36,7 +36,7 @@ export const decrypt = (
   encryptedString: string,
 ): string => {
   console.error("not yet implemented");
-  return "some decrypted string";
+  return "\"some decrypted json\"";
 };
 
 export const validate = (
