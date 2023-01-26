@@ -6,7 +6,7 @@ const { publicKey, privateKey } = crypto.genKeyPair();
 connect({
   publicKey,
   privateKey,
-  onMessage: (m) => console.log("message arrived back to client", m),
+  onMessage: ({ from, payload }) => console.log(from, "says", payload),
   onClose: () => {
     console.log("closed socket");
   },

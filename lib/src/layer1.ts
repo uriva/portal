@@ -29,6 +29,9 @@ interface ClientToLib {
   payload: ClientMessage;
 }
 
+const signableString = (encryptedPayload, to) =>
+  JSON.stringify({ payload: encryptedPayload, to });
+
 export const connect = ({
   publicKey,
   privateKey,
@@ -54,7 +57,7 @@ export const connect = ({
             );
             const certificate = sign(
               privateKey,
-              JSON.stringify({ payload: encryptedPayload, to }),
+              signableString(encryptedPayload, to),
             );
             sendThroughSocket({
               type: "message",
@@ -83,11 +86,15 @@ export const connect = ({
         }
         case "message": {
           const { from, payload, certificate } = message.payload;
-          const decryptedPayloadString = decrypt(payload, privateKey);
-          const isVerified = verify(from, certificate, decryptedPayloadString);
+          const isVerified = verify(
+            from,
+            certificate,
+            signableString(payload, publicKey),
+          );
           if (!isVerified) {
             console.error("ignoring a message which is not signed");
           }
+          const decryptedPayloadString = decrypt(payload, privateKey);
           if (!isVerified) {
             socket.close();
             return;
