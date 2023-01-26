@@ -17,7 +17,7 @@ export interface InteriorToExterior {
   payload: ClientMessage;
 }
 
-export interface Parameters {
+export interface ConnectOptions {
   publicKey: PublicKey;
   privateKey: PrivateKey;
   onMessage: (message: InteriorToExterior) => void;
@@ -37,7 +37,7 @@ export const connect = ({
   privateKey,
   onMessage,
   onClose,
-}: Parameters): Promise<(message: ClientToLib) => Certificate> =>
+}: ConnectOptions): Promise<(message: ClientToLib) => void> =>
   new Promise((resolve) => {
     const socket = new WebSocket("ws://localhost:3000");
     const sendThroughSocket = (x: ClientLibToServer) =>
@@ -68,8 +68,6 @@ export const connect = ({
                 certificate,
               },
             });
-            // The message certificate acts as a guid.
-            return certificate;
           });
           return;
         }

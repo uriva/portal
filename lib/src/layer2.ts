@@ -1,48 +1,63 @@
 import { InteriorToExterior, connect } from "./layer1";
 import { crypto, types } from "shared";
 
+import { randomString } from "shared/src/crypto";
+
 type ClientMessage = types.ClientMessage;
 type RegularMessagePayload = types.RegularMessagePayload;
 
 type PublicKey = crypto.PublicKey;
-type Certificate = crypto.Signature;
+type PrivateKey = crypto.PrivateKey;
 
-type ExteriorToClient = { from: PublicKey; payload: ClientMessage };
 type ClientToExterior = { to: PublicKey; payload: ClientMessage };
 
 interface AckMessage {
   type: "ack";
   payload: {
-    certificate: Certificate;
+    id: string;
   };
 }
+type RegularMessage = {
+  type: "message";
+  payload: { id: string; payload: RegularMessagePayload };
+};
+
+type AckProtocolPayload = AckMessage | RegularMessage;
 
 type AckProtocol = {
   to: PublicKey;
-  payload: AckMessage | { type: "message"; payload: RegularMessagePayload };
+  payload: AckProtocolPayload;
 };
+export interface ConnectWithAckingOptions {
+  publicKey: PublicKey;
+  privateKey: PrivateKey;
+  onMessage: (message: InteriorToExterior) => Promise<void>;
+  onClose: () => void;
+}
 
-export const connectWithAcking = async (
-  publicKey: string,
-  privateKey: string,
-  onMessage: (message: ExteriorToClient) => Promise<void>,
-  onClose: () => void,
-): Promise<(message: ClientToExterior) => Promise<void>> => {
-  const acks = new Map<Certificate, () => void>();
-  const send: (msg: AckProtocol) => Certificate = await connect({
+export const connectWithAcking = async ({
+  publicKey,
+  privateKey,
+  onMessage,
+  onClose,
+}: ConnectWithAckingOptions): Promise<
+  (message: ClientToExterior) => Promise<void>
+> => {
+  const acks = new Map<string, () => void>();
+  const send: (msg: AckProtocol) => void = await connect({
     publicKey,
     privateKey,
     onMessage: (message: InteriorToExterior) => {
-      const { type, payload }: AckMessage | ClientMessage = message.payload;
+      const { type, payload }: AckProtocolPayload = message.payload;
       switch (type) {
         case "ack": {
-          const callback = acks.get(payload.certificate);
+          const callback = acks.get(payload.id);
           if (!callback) {
             console.error("missing entry for ack");
             return;
           }
           callback();
-          acks.delete(payload.payload.certificate);
+          acks.delete(message.payload.id);
           return;
         }
         case "message": {
@@ -51,24 +66,23 @@ export const connectWithAcking = async (
               to: message.from,
               payload: {
                 type: "ack",
-                payload: { certificate: message.certificate },
+                payload: { id: payload.id },
               },
             });
           });
-          return;
         }
       }
     },
     onClose,
   });
-  return (message: ClientToExterior) =>
+  return ({ to, payload }: ClientToExterior) =>
     new Promise((resolve) => {
-      acks.set(
-        send({
-          to: message.to,
-          payload: { type: "message", payload: message.payload },
-        }),
-        resolve,
-      );
+      const msgId = randomString();
+      console.log("created message id", msgId);
+      acks.set(msgId, resolve);
+      send({
+        to,
+        payload: { type: "message", payload: { id: msgId, payload } },
+      });
     });
 };

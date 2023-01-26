@@ -14,7 +14,7 @@ export interface KeyPair {
 
 export const genKeyPair = () =>
   generateKeyPairSync("rsa", {
-    modulusLength: 1024,
+    modulusLength: 4096,
     publicKeyEncoding: {
       type: "spki",
       format: "pem",
