@@ -1,9 +1,8 @@
-import { connectWithAcking } from "./acking";
-import { crypto } from "shared";
+import { connect, genKeyPair } from "portal";
 
-const { publicKey, privateKey } = crypto.genKeyPair();
+const { publicKey, privateKey } = genKeyPair();
 
-connectWithAcking({
+connect({
   publicKey,
   privateKey,
   onMessage: ({ from, payload }) =>
