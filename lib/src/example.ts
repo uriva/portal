@@ -1,4 +1,4 @@
-import { connectWithAcking } from "./layer2";
+import { connectWithAcking } from "./acking";
 import { crypto } from "shared";
 
 const { publicKey, privateKey } = crypto.genKeyPair();

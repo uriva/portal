@@ -1,4 +1,4 @@
-import { connect } from "./layer1";
-import { connectWithAcking } from "./layer2";
+import { connect } from "./connect";
+import { connectWithAcking } from "./acking";
 
 export { connect, connectWithAcking };

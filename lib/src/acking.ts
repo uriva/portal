@@ -1,4 +1,4 @@
-import { InteriorToExterior, connect } from "./layer1";
+import { InteriorToExterior, connect } from "./connect";
 import { crypto, types } from "shared";
 
 import { randomString } from "shared/src/crypto";
