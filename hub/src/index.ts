@@ -2,7 +2,7 @@ import { crypto, types } from "shared";
 
 import { WebSocketServer } from "ws";
 
-const { randomString } = crypto;
+const { randomString, verify } = crypto;
 
 type ClientLibToServer = types.ClientLibToServer;
 type NotValidatedMessage = types.NotValidatedMessage;
@@ -22,7 +22,7 @@ type RelayMessage = {
 type HubIdMessage = {
   type: "hub-id";
   payload: {
-    hubPublicKey: PublicKey;
+    publicKey: PublicKey;
     certificate: Certificate;
   };
 };
@@ -127,8 +127,8 @@ server.on("connection", (socket, request) => {
     const { type, payload }: ClientLibToServer | HubToHubMessage =
       JSON.parse(message);
     if (type === "hub-id") {
-      const { certificate, hubPublicKey } = payload;
-      if (crypto.validate(hubPublicKey, certificate, hubPublicKey)) {
+      const { publicKey, certificate } = payload;
+      if (verify(publicKey, certificate, challenge)) {
         if (has(hubIpToSocket, ip)) {
           hubIpToSocket[ip].close();
         }
@@ -152,7 +152,7 @@ server.on("connection", (socket, request) => {
       if (publicKeyForSocket) return; // A socket will serve only one publicKey until its death.
       const { publicKey, certificate } = payload;
       console.log("identifying client");
-      if (crypto.validate(publicKey, certificate, challenge)) {
+      if (verify(publicKey, certificate, challenge)) {
         setSocketPublicKey(publicKey);
         sendMessageToClient({ type: "validated" });
       } else {

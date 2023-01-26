@@ -1,6 +1,7 @@
 import * as crypto from "crypto";
 
-const { publicEncrypt, generateKeyPairSync, randomBytes } = crypto;
+const { publicEncrypt, privateDecrypt, generateKeyPairSync, randomBytes } =
+  crypto;
 
 export type PrivateKey = string;
 export type PublicKey = string;
@@ -10,9 +11,9 @@ export interface KeyPair {
   publicKey: PublicKey;
   privateKey: PrivateKey;
 }
-const passphrase = "";
+
 export const genKeyPair = () =>
-  crypto.generateKeyPairSync("rsa", {
+  generateKeyPairSync("rsa", {
     modulusLength: 530,
     publicKeyEncoding: {
       type: "spki",
@@ -23,19 +24,17 @@ export const genKeyPair = () =>
       format: "pem",
     },
   });
-export const encrypt = (text, publicKey) =>
-  crypto.publicEncrypt(publicKey, Buffer.from(text)).toString("base64");
+export const encrypt = (text: string, publicKey: PublicKey) =>
+  publicEncrypt(publicKey, Buffer.from(text)).toString("base64");
 
 export const decrypt = (ciphertext, privateKey) =>
-  crypto
-    .privateDecrypt(
-      {
-        key: privateKey,
-        passphrase: "",
-      },
-      Buffer.from(ciphertext, "base64"),
-    )
-    .toString("utf8");
+  privateDecrypt(
+    {
+      key: privateKey,
+      passphrase: "",
+    },
+    Buffer.from(ciphertext, "base64"),
+  ).toString("utf8");
 
 const SIGNATURE_ENCODING = "hex";
 

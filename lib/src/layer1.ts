@@ -10,7 +10,7 @@ type PublicKey = crypto.PublicKey;
 type Certificate = crypto.Signature;
 type PrivateKey = crypto.PrivateKey;
 
-const { certify, decrypt, encrypt, validate } = crypto;
+const { decrypt, encrypt, sign, verify } = crypto;
 
 export interface InteriorToExterior {
   from: PublicKey;
@@ -48,9 +48,8 @@ export const connect = ({
       switch (message.type) {
         case "validated": {
           resolve(({ payload, to }: ClientToLib) => {
-            const encryptedPayload = encrypt(publicKey, privateKey, payload);
-            const certificate = certify(
-              publicKey,
+            const encryptedPayload = encrypt(payload, publicKey);
+            const certificate = sign(
               privateKey,
               JSON.stringify({ payload: encryptedPayload, to }),
             );
@@ -74,7 +73,7 @@ export const connect = ({
             type: "id",
             payload: {
               publicKey,
-              certificate: certify(publicKey, privateKey, challenge),
+              certificate: sign(privateKey, challenge),
             },
           });
           return;
@@ -82,12 +81,8 @@ export const connect = ({
         case "message": {
           const { from, payload, certificate } = message.payload;
           console.log(payload);
-          const decryptedPayloadString = decrypt(
-            publicKey,
-            privateKey,
-            payload,
-          );
-          if (!validate(from, certificate, decryptedPayloadString)) {
+          const decryptedPayloadString = decrypt(payload, privateKey);
+          if (!verify(from, certificate, decryptedPayloadString)) {
             socket.close();
             return;
           }
