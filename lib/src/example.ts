@@ -1,4 +1,3 @@
-import { connect } from "./layer1";
 import { connectWithAcking } from "./layer2";
 import { crypto } from "shared";
 
