@@ -48,7 +48,10 @@ export const connect = ({
       switch (message.type) {
         case "validated": {
           resolve(({ payload, to }: ClientToLib) => {
-            const encryptedPayload = encrypt(payload, publicKey);
+            const encryptedPayload = encrypt(
+              JSON.stringify(payload),
+              publicKey,
+            );
             const certificate = sign(
               privateKey,
               JSON.stringify({ payload: encryptedPayload, to }),
@@ -80,9 +83,12 @@ export const connect = ({
         }
         case "message": {
           const { from, payload, certificate } = message.payload;
-          console.log(payload);
           const decryptedPayloadString = decrypt(payload, privateKey);
-          if (!verify(from, certificate, decryptedPayloadString)) {
+          const isVerified = verify(from, certificate, decryptedPayloadString);
+          if (!isVerified) {
+            console.error("ignoring a message which is not signed");
+          }
+          if (!isVerified) {
             socket.close();
             return;
           }

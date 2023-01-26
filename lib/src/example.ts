@@ -1,19 +1,21 @@
 import { connect } from "./layer1";
+import { crypto } from "shared";
 
-const myPublicKey = "<server public key>";
+const { publicKey, privateKey } = crypto.genKeyPair();
+
 connect({
-  publicKey: myPublicKey,
-  privateKey: "<some private key",
-  onMessage: console.log,
+  publicKey,
+  privateKey,
+  onMessage: (m) => console.log("message arrived back to client", m),
   onClose: () => {
     console.log("closed socket");
   },
 }).then(async (sendMessage) => {
   console.log("connection established");
   try {
-    sendMessage({ to: myPublicKey, payload: "hello" });
+    sendMessage({ to: publicKey, payload: "hello" });
     sendMessage({
-      to: myPublicKey,
+      to: publicKey,
       payload: { text: "i can send json too" },
     });
     console.log("sent messages");
