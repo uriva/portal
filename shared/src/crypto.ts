@@ -37,7 +37,6 @@ export const decrypt = (ciphertext, privateKey) =>
     )
     .toString("utf8");
 
-const SIGNATURE_METHOD = "RSA-SHA256";
 const SIGNATURE_ENCODING = "hex";
 
 export const verify = (
@@ -46,15 +45,13 @@ export const verify = (
   str: string,
 ) =>
   crypto.verify(
-    SIGNATURE_METHOD,
+    null,
     Buffer.from(str),
     publicKey,
     Buffer.from(signature, SIGNATURE_ENCODING),
   );
 
 export const sign = (privateKey: PrivateKey, str: string): Signature =>
-  crypto
-    .sign(SIGNATURE_METHOD, Buffer.from(str), privateKey)
-    .toString(SIGNATURE_ENCODING);
+  crypto.sign(null, Buffer.from(str), privateKey).toString(SIGNATURE_ENCODING);
 
 export const randomString = () => randomBytes(64).toString("hex");
