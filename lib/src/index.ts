@@ -1,4 +1,5 @@
-import { connect } from "./connect";
 import { connectWithAcking } from "./acking";
+import { crypto } from "shared";
 
-export { connect, connectWithAcking };
+export const genKeyPair = crypto.genKeyPair;
+export const connect = connectWithAcking;
