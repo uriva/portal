@@ -15,9 +15,9 @@ describe("testing crypto functions", () => {
   });
 
   test("encrypt and decrypt", () => {
-    const { privateKey } = genKeyPair();
+    const { privateKey, publicKey } = genKeyPair();
     const data = "hello i am some data";
-    expect(decrypt(privateKey, encrypt(privateKey, data))).toEqual(data);
+    expect(decrypt(encrypt(data, publicKey), privateKey)).toEqual(data);
   });
 
   test("sign and verify", () => {
