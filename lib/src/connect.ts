@@ -39,7 +39,7 @@ export const connect = ({
   onClose,
 }: ConnectOptions): Promise<(message: ClientToLib) => void> =>
   new Promise((resolve) => {
-    const socket = new WebSocket("ws://localhost:3000");
+    const socket = new WebSocket(process.env.url || "ws://localhost:3000");
     const sendThroughSocket = (x: ClientLibToServer) =>
       socket.send(JSON.stringify(x));
     socket.onopen = () => {

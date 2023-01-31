@@ -39,7 +39,7 @@ type ServerOutgoingMessage =
 const publicKeyToSocket = {};
 const hubIpToSocket = {};
 
-const server = new WebSocketServer({ port: 3000 });
+const server = new WebSocketServer({ port: process.env.PORT || 3000 });
 
 const conj = (arr, x) => [...arr, x];
 const has = (map, key) => key in map;
