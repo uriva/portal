@@ -1,4 +1,4 @@
-import { PrivateKey, PublicKey, Signature } from "./crypto";
+import { PublicKey, Signature } from "./crypto";
 
 export interface ServerChallengeMessage {
   type: "challenge";
@@ -25,11 +25,15 @@ export interface NotValidatedMessage {
 
 export type ClientMessage = any;
 
+export interface UnderEncryption {
+  from: PublicKey;
+  payload: ClientMessage;
+}
+
 export interface RegularMessagePayload {
   certificate: Signature;
-  from: PublicKey;
   to: PublicKey;
-  payload: ClientMessage;
+  payload: UnderEncryption;
 }
 
 export interface ServerRegularMessage {

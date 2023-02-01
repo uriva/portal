@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "portal": "file:../lib"
+    "portal": "github:uriva/portal-client"
   },
   "type": "module"
 }

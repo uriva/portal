@@ -1,37 +1,29 @@
-import { InteriorToExterior, connect } from "./connect";
-import { crypto, types } from "shared";
+import { crypto, types } from "common";
 
-import { randomString } from "shared/src/crypto";
+import { connect } from "./connect";
 
-type ClientMessage = types.ClientMessage;
-type RegularMessagePayload = types.RegularMessagePayload;
+type ClientToExterior = { to: crypto.PublicKey; payload: types.ClientMessage };
 
-type PublicKey = crypto.PublicKey;
-type PrivateKey = crypto.PrivateKey;
-
-type ClientToExterior = { to: PublicKey; payload: ClientMessage };
-
-interface AckMessage {
-  type: "ack";
-  payload: {
-    id: string;
-  };
-}
-type RegularMessage = {
-  type: "message";
-  payload: { id: string; payload: RegularMessagePayload };
-};
-
-type AckProtocolPayload = AckMessage | RegularMessage;
+type AckProtocolPayload =
+  | {
+      type: "ack";
+      payload: {
+        id: string;
+      };
+    }
+  | {
+      type: "message";
+      payload: { id: string; payload: types.RegularMessagePayload };
+    };
 
 type AckProtocol = {
-  to: PublicKey;
+  to: crypto.PublicKey;
   payload: AckProtocolPayload;
 };
 export interface ConnectWithAckingOptions {
-  publicKey: PublicKey;
-  privateKey: PrivateKey;
-  onMessage: (message: InteriorToExterior) => Promise<void>;
+  publicKey: crypto.PublicKey;
+  privateKey: crypto.PrivateKey;
+  onMessage: (message: types.UnderEncryption) => Promise<void>;
   onClose: () => void;
 }
 
@@ -47,7 +39,7 @@ export const connectWithAcking = async ({
   const send: (msg: AckProtocol) => void = await connect({
     publicKey,
     privateKey,
-    onMessage: (message: InteriorToExterior) => {
+    onMessage: (message: types.UnderEncryption) => {
       const { type, payload }: AckProtocolPayload = message.payload;
       switch (type) {
         case "ack": {
@@ -77,7 +69,7 @@ export const connectWithAcking = async ({
   });
   return ({ to, payload }: ClientToExterior) =>
     new Promise((resolve) => {
-      const msgId = randomString();
+      const msgId = crypto.randomString();
       console.log("created message id", msgId);
       acks.set(msgId, resolve);
       send({

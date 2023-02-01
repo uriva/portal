@@ -1,4 +1,4 @@
-import { crypto, types } from "shared";
+import { crypto, types } from "common";
 
 import WebSocket from "ws";
 
@@ -7,20 +7,14 @@ type ClientMessage = types.ClientMessage;
 type ClientLibToServer = types.ClientLibToServer;
 
 type PublicKey = crypto.PublicKey;
-type Certificate = crypto.Signature;
 type PrivateKey = crypto.PrivateKey;
 
 const { decrypt, encrypt, sign, verify } = crypto;
 
-export interface InteriorToExterior {
-  from: PublicKey;
-  payload: ClientMessage;
-}
-
 export interface ConnectOptions {
   publicKey: PublicKey;
   privateKey: PrivateKey;
-  onMessage: (message: InteriorToExterior) => void;
+  onMessage: (message: types.UnderEncryption) => void;
   onClose: () => void;
 }
 
@@ -83,24 +77,21 @@ export const connect = ({
           return;
         }
         case "message": {
-          const { from, payload, certificate } = message.payload;
-          const isVerified = verify(
-            from,
-            certificate,
-            signableString(payload, publicKey),
+          const { payload, certificate } = message.payload;
+          const underEncryption: types.UnderEncryption = JSON.parse(
+            decrypt(payload, privateKey),
           );
-          if (!isVerified) {
-            console.error("ignoring a message which is not signed");
+          if (
+            verify(
+              underEncryption.from,
+              certificate,
+              signableString(payload, publicKey),
+            )
+          ) {
+            onMessage(underEncryption);
+          } else {
+            console.error("ignoring a message with bad certificate");
           }
-          const decryptedPayloadString = decrypt(payload, privateKey);
-          if (!isVerified) {
-            socket.close();
-            return;
-          }
-          onMessage({
-            from,
-            payload: JSON.parse(decryptedPayloadString),
-          });
           return;
         }
       }

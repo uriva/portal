@@ -1,4 +1,4 @@
-import { crypto, types } from "shared";
+import { crypto, types } from "common";
 
 import { WebSocketServer } from "ws";
 
@@ -43,6 +43,8 @@ const server = new WebSocketServer({ port: process.env.PORT || 3000 });
 
 const conj = (arr, x) => [...arr, x];
 const has = (map, key) => key in map;
+const getOrDefault = (def) => (mapping) => (key) =>
+  has(mapping, key) ? mapping[key] : def;
 const remove = (mapping, key) => {
   const newMapping = { ...mapping };
   delete newMapping[key];
@@ -161,30 +163,22 @@ server.on("connection", (socket, request) => {
     }
     if (type === "message") {
       if (!publicKeyForSocket) return; // Unauthenticated sockets are not to be used.
-      const { to, certificate, from } = payload;
-      if (from !== publicKeyForSocket) return;
+      const { to } = payload;
       if (!canSendMessage(publicKeyForSocket, to)) {
         return;
       }
       recordForRateLimitingAndBilling(publicKeyForSocket, to);
       console.log("processing message", payload);
-      if (has(publicKeyToSocket, to)) {
-        publicKeyToSocket[to].forEach((sendMessageToClient) => {
-          sendMessageToClient({
-            type: "message",
-            payload,
-          });
-        });
-      }
-      resolvePeerHubSockets(to).map((socket) =>
+      (publicKeyToSocket[to] || []).forEach((sendMessageToClient) => {
         sendMessageToClient({
+          type: "message",
+          payload,
+        });
+      });
+      resolvePeerHubSockets(to).map((peerHubSocket) =>
+        peerHubSocket.send(JSON.stringify(message))({
           type: "relay",
-          payload: {
-            to,
-            from: publicKeyForSocket,
-            payload: payload.payload,
-            certificate,
-          },
+          payload,
         }),
       );
     }

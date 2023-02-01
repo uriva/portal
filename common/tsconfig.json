@@ -1,0 +1,11 @@
+{
+  "ts-node": {
+    "esm": true
+  },
+  "compilerOptions": {
+    "moduleResolution": "node",
+    "target": "ES2015",
+    "types": ["node", "jest"],
+    "esModuleInterop": true
+  }
+}
