@@ -1,35 +1,34 @@
 import {
+  assertEquals,
+  assertNotEquals,
+} from "https://deno.land/std@0.174.0/testing/asserts.ts";
+import {
   decrypt,
   encrypt,
   genKeyPair,
   randomString,
   sign,
   verify,
-} from "./crypto";
+} from "./crypto.ts";
 
-describe("testing crypto functions", () => {
-  test("keypair outputs strings", () => {
-    const { publicKey, privateKey } = genKeyPair();
-    expect(typeof publicKey).toEqual("string");
-    expect(typeof privateKey).toEqual("string");
-  });
+Deno.test("encrypt and decrypt", async () => {
+  const { privateKey, publicKey } = await genKeyPair();
+  const data = "hello i am some data";
+  assertEquals(await decrypt(await encrypt(data, publicKey), privateKey), data);
+});
 
-  test("encrypt and decrypt", () => {
-    const { privateKey, publicKey } = genKeyPair();
-    const data = "hello i am some data";
-    expect(decrypt(encrypt(data, publicKey), privateKey)).toEqual(data);
-  });
+Deno.test("sign and verify", async () => {
+  const { publicKey, privateKey } = await genKeyPair();
+  const data = "hello i am some data";
+  const signature = await sign(privateKey, data);
+  assertEquals(await verify(publicKey, signature, data), true);
+  assertEquals(
+    await verify((await genKeyPair()).publicKey, signature, data),
+    false,
+  );
+});
 
-  test("sign and verify", () => {
-    const { publicKey, privateKey } = genKeyPair();
-    const data = "hello i am some data";
-    const signature = sign(privateKey, data);
-    expect(verify(publicKey, signature, data)).toBeTruthy();
-    expect(verify(genKeyPair().publicKey, signature, data)).toBeFalsy();
-  });
-
-  test("generate a random string", () => {
-    expect(typeof randomString()).toEqual("string");
-    expect(randomString() === randomString()).toBeFalsy();
-  });
+Deno.test("generate a random string", () => {
+  assertEquals(typeof randomString(), "string");
+  assertNotEquals(randomString(), randomString());
 });

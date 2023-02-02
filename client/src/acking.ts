@@ -1,6 +1,6 @@
-import { crypto, types } from "common";
+import { crypto, types } from "../../common/src/index.ts";
 
-import { connect } from "./connect";
+import { connect } from "./connect.ts";
 
 type ClientToExterior = { to: crypto.PublicKey; payload: types.ClientMessage };
 

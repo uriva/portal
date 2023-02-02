@@ -1,6 +1,6 @@
-import { crypto, types } from "common";
+import { crypto, types } from "../../common/src/index.ts";
 
-import { WebSocketServer } from "ws";
+import { WebSocketServer } from "https://deno.land/x/websocket@v0.1.4/mod.ts";
 
 const { randomString, verify } = crypto;
 
@@ -37,14 +37,12 @@ type ServerOutgoingMessage =
   | NotValidatedMessage;
 
 const publicKeyToSocket = {};
-const hubIpToSocket = {};
+const hubIdToSocket = {};
 
-const server = new WebSocketServer({ port: process.env.PORT || 3000 });
+const server = new WebSocketServer(Deno.env.PORT || 3000);
 
 const conj = (arr, x) => [...arr, x];
 const has = (map, key) => key in map;
-const getOrDefault = (def) => (mapping) => (key) =>
-  has(mapping, key) ? mapping[key] : def;
 const remove = (mapping, key) => {
   const newMapping = { ...mapping };
   delete newMapping[key];
@@ -88,20 +86,19 @@ const resolvePeerHubSockets = (publicKey) =>
     if (isMeIP(ip)) {
       return null;
     }
-    if (has(hubIpToSocket, ip)) {
-      return hubIpToSocket[ip];
+    if (has(hubIdToSocket, ip)) {
+      return hubIdToSocket[ip];
     }
-    hubIpToSocket[ip] = connectToHubSocket(ip);
-    return hubIpToSocket[ip];
+    hubIdToSocket[ip] = connectToHubSocket(ip);
+    return hubIdToSocket[ip];
   });
 
 // Incoming connections might be from a client or another hub.
-server.on("connection", (socket, request) => {
+server.on("connection", (socket) => {
   const sendMessageToClient = (message: ServerOutgoingMessage) =>
     socket.send(JSON.stringify(message));
   let publicKeyForSocket = null;
   let isPeerHub = false;
-  const ip = request.socket.remoteAddress;
   const setSocketPublicKey = (publicKey) => {
     publicKeyForSocket = publicKey;
     publicKeyToSocket[publicKey] = conj(
@@ -119,9 +116,9 @@ server.on("connection", (socket, request) => {
           ? []
           : remove(publicKeyToSocket[publicKeyForSocket], socket);
       redisRemoveFromSet(publicKeyForSocket, myIP());
-      if (hubIpToSocket[ip] === socket) {
+      if (hubIdToSocket[publicKeyForSocket] === socket) {
         socket.close();
-        delete hubIpToSocket[ip];
+        delete hubIdToSocket[publicKeyForSocket];
       }
     }
   });
@@ -129,13 +126,15 @@ server.on("connection", (socket, request) => {
     const { type, payload }: ClientLibToServer | HubToHubMessage =
       JSON.parse(message);
     if (type === "hub-id") {
+      if (publicKeyForSocket) return;
       const { publicKey, certificate } = payload;
       if (verify(publicKey, certificate, challenge)) {
-        if (has(hubIpToSocket, ip)) {
-          hubIpToSocket[ip].close();
+        if (has(hubIdToSocket, publicKey)) {
+          hubIdToSocket[publicKey].close();
         }
-        hubIpToSocket[ip] = socket;
+        hubIdToSocket[publicKey] = socket;
         isPeerHub = true;
+        publicKeyForSocket = publicKey;
         sendMessageToClient({ type: "validated" });
       } else {
         sendMessageToClient({ type: "bad-auth" });

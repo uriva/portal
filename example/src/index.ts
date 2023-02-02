@@ -1,4 +1,4 @@
-import { connect, genKeyPair } from "portal";
+import { connect, genKeyPair } from "../../client/src/index.ts";
 
 const { publicKey, privateKey } = genKeyPair();
 

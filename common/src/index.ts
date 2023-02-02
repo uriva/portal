@@ -1,2 +1,2 @@
-export * as crypto from "./crypto";
-export * as types from "./types";
+export * as crypto from "./crypto.ts";
+export * as types from "./types.ts";

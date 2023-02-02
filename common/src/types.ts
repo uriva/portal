@@ -1,4 +1,4 @@
-import { PublicKey, Signature } from "./crypto";
+import { PublicKey, Signature } from "./crypto.ts";
 
 export interface ServerChallengeMessage {
   type: "challenge";

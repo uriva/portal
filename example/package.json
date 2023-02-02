@@ -1,6 +1,0 @@
-{
-  "dependencies": {
-    "portal": "github:uriva/portal-client"
-  },
-  "type": "module"
-}

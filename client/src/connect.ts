@@ -1,6 +1,6 @@
-import { crypto, types } from "common";
+import { crypto, types } from "../../common/src/index.ts";
 
-import WebSocket from "ws";
+import { StandardWebSocketClient } from "https://deno.land/x/websocket@v0.1.4/mod.ts";
 
 type ServerMessage = types.ServerMessage;
 type ClientMessage = types.ClientMessage;
@@ -33,7 +33,9 @@ export const connect = ({
   onClose,
 }: ConnectOptions): Promise<(message: ClientToLib) => void> =>
   new Promise((resolve) => {
-    const socket = new WebSocket(process.env.url || "ws://localhost:3000");
+    const socket = new StandardWebSocketClient(
+      Deno.env.url || "ws://localhost:3000",
+    );
     const sendThroughSocket = (x: ClientLibToServer) =>
       socket.send(JSON.stringify(x));
     socket.onopen = () => {
