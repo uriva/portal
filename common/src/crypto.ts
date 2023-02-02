@@ -92,3 +92,12 @@ export const sign = async ({ signing }: PrivateKey, data: string) =>
     .then((b) => b.toString());
 
 export const randomString = () => cryptoRandomString({ length: 64 });
+
+// deno-lint-ignore no-unused-vars
+export const hashPublicKey = (publicKey: PublicKey) => {
+  console.error("not yet implemented");
+  return "asdsadasda";
+};
+
+export const comparePublicKeys = (p1: PublicKey, p2: PublicKey) =>
+  hashPublicKey(p1) === hashPublicKey(p2);
