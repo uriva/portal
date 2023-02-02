@@ -1,3 +1,4 @@
+import { Md5 } from "https://deno.land/std@0.119.0/hash/md5.ts";
 import { cryptoRandomString } from "https://deno.land/x/crypto_random_string@1.0.0/mod.ts";
 
 export type PrivateKey = { signing: JsonWebKey; encryption: JsonWebKey };
@@ -106,11 +107,19 @@ export const sign = async ({ signing }: PrivateKey, data: string) =>
 
 export const randomString = () => cryptoRandomString({ length: 64 });
 
-// deno-lint-ignore no-unused-vars
-export const hashPublicKey = (publicKey: PublicKey) => {
-  console.error("not yet implemented");
-  return "asdsadasda";
-};
+const sortObjKeys = (x: { [index: string]: any }) =>
+  Object.keys(x)
+    .sort()
+    .reduce((acc: { [index: string]: any }, key) => {
+      acc[key] = x[key];
+      return acc;
+    }, {});
+
+const hashJWK = (x: JsonWebKey) =>
+  new Md5().update(JSON.stringify(sortObjKeys(x))).toString();
+
+export const hashPublicKey = ({ encryption, signing }: PublicKey) =>
+  hashJWK(encryption) + hashJWK(signing);
 
 export const comparePublicKeys = (p1: PublicKey, p2: PublicKey) =>
   hashPublicKey(p1) === hashPublicKey(p2);

@@ -175,8 +175,10 @@ const start = async () => {
           : remove(publicKeyToSocket, hashPublicKey(socketPublicKey), socket),
       );
       redisRemoveFromSet(hashPublicKey(socketPublicKey), myIP());
-      if (get(hubIdToSocket, hashPublicKey(socketPublicKey)) === socket) {
-        socket.close();
+      if (
+        get(publicKeyToSocket, hashPublicKey(socketPublicKey)) as Array<>.includes(socket)
+      ) {
+        socket.close(1000);
         remove(publicKeyToSocket, hashPublicKey(socketPublicKey));
       }
     });

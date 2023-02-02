@@ -6,6 +6,7 @@ import {
   decrypt,
   encrypt,
   genKeyPair,
+  hashPublicKey,
   randomString,
   sign,
   verify,
@@ -31,4 +32,10 @@ Deno.test("sign and verify", async () => {
 Deno.test("generate a random string", () => {
   assertEquals(typeof randomString(), "string");
   assertNotEquals(randomString(), randomString());
+});
+
+Deno.test("hash public keys", async () => {
+  const [k1, k2] = await Promise.all([genKeyPair(), genKeyPair()]);
+  assertEquals(hashPublicKey(k1.publicKey), hashPublicKey(k1.publicKey));
+  assertNotEquals(hashPublicKey(k1.publicKey), hashPublicKey(k2.publicKey));
 });
