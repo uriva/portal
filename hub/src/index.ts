@@ -122,13 +122,13 @@ server.on("connection", (socket) => {
       }
     }
   });
-  socket.on("message", (message) => {
+  socket.on("message", async (message) => {
     const { type, payload }: ClientLibToServer | HubToHubMessage =
       JSON.parse(message);
     if (type === "hub-id") {
       if (publicKeyForSocket) return;
       const { publicKey, certificate } = payload;
-      if (verify(publicKey, certificate, challenge)) {
+      if (await verify(publicKey, certificate, challenge)) {
         if (has(hubIdToSocket, publicKey)) {
           hubIdToSocket[publicKey].close();
         }
@@ -153,7 +153,7 @@ server.on("connection", (socket) => {
       if (publicKeyForSocket) return; // A socket will serve only one publicKey until its death.
       const { publicKey, certificate } = payload;
       console.log("identifying client");
-      if (verify(publicKey, certificate, challenge)) {
+      if (await verify(publicKey, certificate, challenge)) {
         setSocketPublicKey(publicKey);
         sendMessageToClient({ type: "validated" });
       } else {

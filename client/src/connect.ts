@@ -42,16 +42,16 @@ export const connect = ({
       console.log("socket opened");
     };
     socket.onclose = onClose;
-    socket.onmessage = ({ data }) => {
+    socket.onmessage = async ({ data }) => {
       const message: ServerMessage = JSON.parse(data.toString());
       switch (message.type) {
         case "validated": {
-          resolve(({ payload, to }: ClientToLib) => {
-            const encryptedPayload = encrypt(
+          resolve(async ({ payload, to }: ClientToLib) => {
+            const encryptedPayload = await encrypt(
               JSON.stringify(payload),
               publicKey,
             );
-            const certificate = sign(
+            const certificate = await sign(
               privateKey,
               signableString(encryptedPayload, to),
             );
@@ -73,7 +73,7 @@ export const connect = ({
             type: "id",
             payload: {
               publicKey,
-              certificate: sign(privateKey, challenge),
+              certificate: await sign(privateKey, challenge),
             },
           });
           return;
@@ -81,10 +81,10 @@ export const connect = ({
         case "message": {
           const { payload, certificate } = message.payload;
           const underEncryption: types.UnderEncryption = JSON.parse(
-            decrypt(payload, privateKey),
+            await decrypt(payload, privateKey),
           );
           if (
-            verify(
+            await verify(
               underEncryption.from,
               certificate,
               signableString(payload, publicKey),
