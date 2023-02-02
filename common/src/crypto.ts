@@ -24,18 +24,18 @@ const encryptAlgo = {
 
 const format = "jwk";
 
-export const stringEncode = (str: string): ArrayBuffer =>
+const stringEncode = (str: string): ArrayBuffer =>
   new TextEncoder().encode(str).buffer;
 
-export const stringDecode = (arr: ArrayBuffer): string =>
+const stringDecode = (arr: ArrayBuffer): string =>
   new TextDecoder().decode(arr);
 
-export const stringFromArrayBuffer = (buf: ArrayBuffer): string =>
+const stringFromArrayBuffer = (buf: ArrayBuffer): string =>
   Array.from(new Uint8Array(buf))
     .map((n) => String.fromCharCode(n))
     .join("");
 
-export const arrayBufferFromString = (str: string): ArrayBuffer =>
+const arrayBufferFromString = (str: string): ArrayBuffer =>
   new Uint8Array(Array.from(str).map((c) => c.charCodeAt(0)));
 
 const exportJWK = (key: CryptoKey) => crypto.subtle.exportKey(format, key);
@@ -68,7 +68,7 @@ export const encrypt = async (data: string, { encryption }: PublicKey) =>
       await crypto.subtle.importKey(format, encryption, encryptAlgo, true, [
         "encrypt",
       ]),
-      stringEncode(data)
+      stringEncode(data),
     )
     .then(stringFromArrayBuffer);
 
@@ -79,20 +79,20 @@ export const decrypt = async (data: string, { encryption }: PrivateKey) =>
       await crypto.subtle.importKey(format, encryption, encryptAlgo, true, [
         "decrypt",
       ]),
-      arrayBufferFromString(data)
+      arrayBufferFromString(data),
     )
     .then(stringDecode);
 
 export const verify = async (
   { signing }: PublicKey,
   signature: Signature,
-  data: string
+  data: string,
 ) =>
   crypto.subtle.verify(
     signAlgo,
     await crypto.subtle.importKey(format, signing, signAlgo, false, ["verify"]),
     arrayBufferFromString(signature),
-    stringEncode(data)
+    stringEncode(data),
   );
 
 export const sign = async ({ signing }: PrivateKey, data: string) =>
@@ -100,7 +100,7 @@ export const sign = async ({ signing }: PrivateKey, data: string) =>
     .sign(
       signAlgo,
       await crypto.subtle.importKey(format, signing, signAlgo, false, ["sign"]),
-      stringEncode(data)
+      stringEncode(data),
     )
     .then(stringFromArrayBuffer);
 
