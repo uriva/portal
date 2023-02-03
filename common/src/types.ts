@@ -1,4 +1,11 @@
-import { EncryptedShortString, PublicKey, RandomString, Signature } from "./crypto.ts";
+export { err, ok, Result } from "npm:true-myth@6.2.0/result";
+
+import {
+  EncryptedShortString,
+  PublicKey,
+  RandomString,
+  Signature,
+} from "./crypto.ts";
 
 export interface ServerChallengeMessage {
   type: "challenge";
