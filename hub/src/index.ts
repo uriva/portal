@@ -60,8 +60,11 @@ function remove<K, V>(mapping: Map<K, V>, key: K) {
   return newMapping;
 }
 
-// @ts-ignore not yet implemented
-const connectToHubSocket = (id): Promise<WebSocketClient> => {
+const connectAndReturnSocketForPeerHub = (
+  // deno-lint-ignore no-unused-vars
+  publicKey: PublicKey,
+  // @ts-ignore not yet implemented
+): Promise<WebSocketClient> => {
   console.error("not yet implemented");
 };
 
@@ -109,7 +112,9 @@ const resolvePeerHubSockets =
         if (has(publicKeyToSocket, id)) {
           return get(publicKeyToSocket, id);
         }
-        set(publicKeyToSocket, id, [await connectToHubSocket(id)]);
+        set(publicKeyToSocket, id, [
+          await connectAndReturnSocketForPeerHub(id),
+        ]);
         return get(publicKeyToSocket, id);
       }),
     );
