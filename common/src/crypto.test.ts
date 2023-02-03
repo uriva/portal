@@ -14,13 +14,19 @@ import {
 
 Deno.test("encrypt and decrypt", async () => {
   const { privateKey, publicKey } = await genKeyPair();
-  const data = "hello i am some data";
+  const data = longString();
   assertEquals(await decrypt(await encrypt(data, publicKey), privateKey), data);
 });
 
+const longString = () => {
+  let data = randomString();
+  for (let i = 0; i < 5; i++) data += data;
+  return data;
+};
+
 Deno.test("sign and verify", async () => {
   const { publicKey, privateKey } = await genKeyPair();
-  const data = "hello i am some data";
+  const data = longString();
   const signature = await sign(privateKey, data);
   assertEquals(await verify(publicKey, signature, data), true);
   assertEquals(
