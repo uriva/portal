@@ -1,8 +1,13 @@
 import { Md5 } from "https://deno.land/std@0.119.0/hash/md5.ts";
 import { cryptoRandomString } from "https://deno.land/x/crypto_random_string@1.0.0/mod.ts";
 
-export type PrivateKey = { signing: JsonWebKey; encryption: JsonWebKey };
-export type PublicKey = { signing: JsonWebKey; encryption: JsonWebKey };
+export type PrivateKey = { signing: JsonWebKey; decryption: JsonWebKey };
+export type PublicKey = { verification: JsonWebKey; encryption: JsonWebKey };
+export type KeyPair = {
+  publicKey: PublicKey;
+  privateKey: PrivateKey;
+};
+
 export type EncryptedShortString = string;
 export type EncryptedBigData = {
   encrypted: number[];
@@ -10,10 +15,6 @@ export type EncryptedBigData = {
 };
 export type Signature = string;
 export type RandomString = string;
-export interface KeyPair {
-  publicKey: PublicKey;
-  privateKey: PrivateKey;
-}
 
 const signAlgo = {
   name: "RSASSA-PKCS1-v1_5",
@@ -46,7 +47,7 @@ const arrayBufferFromString = (str: string): ArrayBuffer =>
 
 const exportJWK = (key: CryptoKey) => crypto.subtle.exportKey(format, key);
 
-export const genKeyPair = async () => {
+export const genKeyPair = async (): Promise<KeyPair> => {
   const signingKeyPair = await crypto.subtle.generateKey(signAlgo, true, [
     "sign",
     "verify",
@@ -58,10 +59,10 @@ export const genKeyPair = async () => {
   return {
     privateKey: {
       signing: await exportJWK(signingKeyPair.privateKey),
-      encryption: await exportJWK(encryptionKeyPair.privateKey),
+      decryption: await exportJWK(encryptionKeyPair.privateKey),
     },
     publicKey: {
-      signing: await exportJWK(signingKeyPair.publicKey),
+      verification: await exportJWK(signingKeyPair.publicKey),
       encryption: await exportJWK(encryptionKeyPair.publicKey),
     },
   };
@@ -85,12 +86,12 @@ export const encrypt = async (
 
 export const decrypt = async (
   data: EncryptedShortString,
-  { encryption }: PrivateKey,
+  { decryption }: PrivateKey,
 ) =>
   crypto.subtle
     .decrypt(
       encryptAlgo,
-      await crypto.subtle.importKey(format, encryption, encryptAlgo, true, [
+      await crypto.subtle.importKey(format, decryption, encryptAlgo, true, [
         "decrypt",
       ]),
       arrayBufferFromString(data),
@@ -98,13 +99,15 @@ export const decrypt = async (
     .then(stringDecode);
 
 export const verify = async (
-  { signing }: PublicKey,
+  { verification }: PublicKey,
   signature: Signature,
   data: string,
 ) =>
   crypto.subtle.verify(
     signAlgo,
-    await crypto.subtle.importKey(format, signing, signAlgo, false, ["verify"]),
+    await crypto.subtle.importKey(format, verification, signAlgo, false, [
+      "verify",
+    ]),
     arrayBufferFromString(signature),
     stringEncode(data),
   );
@@ -135,8 +138,8 @@ const sortObjKeys = (x: StrObject) =>
 const hashJWK = (x: JsonWebKey) =>
   new Md5().update(JSON.stringify(sortObjKeys(x as StrObject))).toString();
 
-export const hashPublicKey = ({ encryption, signing }: PublicKey) =>
-  hashJWK(encryption) + hashJWK(signing);
+export const hashPublicKey = ({ encryption, verification }: PublicKey) =>
+  hashJWK(encryption) + hashJWK(verification);
 
 export const comparePublicKeys = (p1: PublicKey, p2: PublicKey) =>
   hashPublicKey(p1) === hashPublicKey(p2);
