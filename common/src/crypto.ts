@@ -3,7 +3,11 @@ import { cryptoRandomString } from "https://deno.land/x/crypto_random_string@1.0
 
 export type PrivateKey = { signing: JsonWebKey; encryption: JsonWebKey };
 export type PublicKey = { signing: JsonWebKey; encryption: JsonWebKey };
-export type EncryptedString = string;
+export type EncryptedShortString = string;
+export type EncryptedBigData = {
+  encrypted: number[];
+  iv: Uint8Array;
+};
 export type Signature = string;
 export type RandomString = string;
 export interface KeyPair {
@@ -66,7 +70,7 @@ export const genKeyPair = async () => {
 export const encrypt = async (
   data: string,
   { encryption }: PublicKey,
-): Promise<EncryptedString> => {
+): Promise<EncryptedShortString> => {
   if (data.length > maxMessageLength) throw "string is too long to encrypt";
   return crypto.subtle
     .encrypt(
@@ -80,7 +84,7 @@ export const encrypt = async (
 };
 
 export const decrypt = async (
-  data: EncryptedString,
+  data: EncryptedShortString,
   { encryption }: PrivateKey,
 ) =>
   crypto.subtle
@@ -136,3 +140,84 @@ export const hashPublicKey = ({ encryption, signing }: PublicKey) =>
 
 export const comparePublicKeys = (p1: PublicKey, p2: PublicKey) =>
   hashPublicKey(p1) === hashPublicKey(p2);
+
+const createSymmetricKey = () =>
+  crypto.subtle.generateKey(
+    {
+      name: "AES-CBC",
+      length: 128,
+    },
+    true,
+    ["encrypt", "decrypt"],
+  );
+
+const encryptSymmetric = async (
+  key: CryptoKey,
+  data: string,
+): Promise<EncryptedBigData> => {
+  const iv = window.crypto.getRandomValues(new Uint8Array(128 / 8));
+  return {
+    iv,
+    encrypted: Array.from(
+      new Uint8Array(
+        await window.crypto.subtle.encrypt(
+          {
+            name: "AES-CBC",
+            iv,
+          },
+          key,
+          new TextEncoder().encode(data),
+        ),
+      ),
+    ),
+  };
+};
+
+const symmetricAlgo = {
+  name: "AES-CBC",
+};
+
+const log = (x: any) => {
+  console.log(x);
+  return x;
+};
+export const decryptLongString = async (
+  privateKey: PrivateKey,
+  { symmetricKey, data: { encrypted, iv } }: EncryptedStringWithSymmetricKey,
+) =>
+  new TextDecoder().decode(
+    await window.crypto.subtle.decrypt(
+      {
+        ...symmetricAlgo,
+        iv,
+      },
+      await crypto.subtle.importKey(
+        format,
+        JSON.parse(await decrypt(symmetricKey, privateKey)),
+        symmetricAlgo,
+        false,
+        ["encrypt", "decrypt"],
+      ),
+      new Uint8Array(encrypted),
+    ),
+  );
+
+export type EncryptedStringWithSymmetricKey = {
+  data: EncryptedBigData;
+  symmetricKey: EncryptedShortString;
+};
+
+export const encryptLongString = async (
+  publicKey: PublicKey,
+  dataToEncrypt: string,
+): Promise<EncryptedStringWithSymmetricKey> => {
+  const symmetricKeyUnencrypted = await createSymmetricKey();
+  const [data, symmetricKey] = await Promise.all([
+    encryptSymmetric(symmetricKeyUnencrypted, dataToEncrypt),
+    encrypt(
+      JSON.stringify(await exportJWK(symmetricKeyUnencrypted)),
+      publicKey,
+    ),
+  ]);
+  return { data, symmetricKey };
+};

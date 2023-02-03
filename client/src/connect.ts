@@ -1,4 +1,10 @@
 import { crypto, types } from "../../common/src/index.ts";
+import {
+  decryptLongString,
+  encryptLongString,
+  sign,
+  verify,
+} from "../../common/src/crypto.ts";
 
 import { StandardWebSocketClient } from "https://deno.land/x/websocket@v0.1.4/mod.ts";
 
@@ -8,8 +14,6 @@ type ClientLibToServer = types.ClientLibToServer;
 
 type PublicKey = crypto.PublicKey;
 type PrivateKey = crypto.PrivateKey;
-
-const { decrypt, encrypt, sign, verify } = crypto;
 
 export interface ConnectOptions {
   publicKey: PublicKey;
@@ -47,19 +51,21 @@ export const connect = ({
       switch (message.type) {
         case "validated": {
           resolve(async ({ payload, to }: ClientToLib) => {
-            const encryptedPayload = await encrypt(
-              JSON.stringify({ from: publicKey, payload }),
-              publicKey,
+            const encrypted = JSON.stringify(
+              await encryptLongString(
+                publicKey,
+                JSON.stringify({ from: publicKey, payload }),
+              ),
             );
             const certificate = await sign(
               privateKey,
-              signableString(encryptedPayload, to),
+              signableString(encrypted, to),
             );
             sendThroughSocket({
               type: "message",
               payload: {
                 to,
-                payload: encryptedPayload,
+                payload: encrypted,
                 certificate,
               },
             });
@@ -81,7 +87,7 @@ export const connect = ({
           const { payload, certificate } = message.payload;
           console.log("one", message);
           const underEncryption: types.UnderEncryption = JSON.parse(
-            await decrypt(payload, privateKey),
+            await decryptLongString(privateKey, JSON.parse(payload)),
           );
           if (
             await verify(

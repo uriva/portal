@@ -4,7 +4,9 @@ import {
 } from "https://deno.land/std@0.174.0/testing/asserts.ts";
 import {
   decrypt,
+  decryptLongString,
   encrypt,
+  encryptLongString,
   genKeyPair,
   hashPublicKey,
   maxMessageLength,
@@ -17,6 +19,18 @@ Deno.test("encrypt and decrypt", async () => {
   const { privateKey, publicKey } = await genKeyPair();
   const data = randomString(maxMessageLength);
   assertEquals(await decrypt(await encrypt(data, publicKey), privateKey), data);
+});
+
+Deno.test("encrypt long string and decrypt", async () => {
+  const { privateKey, publicKey } = await genKeyPair();
+  const longString = randomString(maxMessageLength * 100);
+  assertEquals(
+    await decryptLongString(
+      privateKey,
+      await encryptLongString(publicKey, longString),
+    ),
+    longString,
+  );
 });
 
 Deno.test("sign and verify", async () => {

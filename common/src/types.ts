@@ -1,4 +1,4 @@
-import { EncryptedString, PublicKey, RandomString, Signature } from "./crypto.ts";
+import { EncryptedShortString, PublicKey, RandomString, Signature } from "./crypto.ts";
 
 export interface ServerChallengeMessage {
   type: "challenge";
@@ -34,7 +34,7 @@ export interface UnderEncryption {
 export interface RegularMessagePayload {
   certificate: Signature;
   to: PublicKey;
-  payload: EncryptedString;
+  payload: EncryptedShortString;
 }
 
 export interface ServerRegularMessage {
