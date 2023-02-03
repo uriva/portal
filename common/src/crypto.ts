@@ -19,7 +19,7 @@ const signAlgo = {
 };
 const encryptAlgo = {
   name: "RSA-OAEP",
-  modulusLength: 2048,
+  modulusLength: 4096,
   publicExponent: new Uint8Array([0x01, 0x00, 0x01]),
   hash: "SHA-256",
 };
@@ -66,8 +66,9 @@ export const genKeyPair = async () => {
 export const encrypt = async (
   data: string,
   { encryption }: PublicKey,
-): Promise<EncryptedString> =>
-  crypto.subtle
+): Promise<EncryptedString> => {
+  if (data.length > maxMessageLength) throw "string is too long to encrypt";
+  return crypto.subtle
     .encrypt(
       encryptAlgo,
       await crypto.subtle.importKey(format, encryption, encryptAlgo, true, [
@@ -76,6 +77,7 @@ export const encrypt = async (
       stringEncode(data),
     )
     .then(stringFromArrayBuffer);
+};
 
 export const decrypt = async (
   data: EncryptedString,
@@ -112,8 +114,10 @@ export const sign = async ({ signing }: PrivateKey, data: string) =>
     )
     .then(stringFromArrayBuffer);
 
-export const randomString = (): RandomString =>
-  cryptoRandomString({ length: 64 });
+export const maxMessageLength = 446;
+
+export const randomString = (length: number): RandomString =>
+  cryptoRandomString({ length });
 
 type StrObject = { [index: string]: string };
 const sortObjKeys = (x: StrObject) =>

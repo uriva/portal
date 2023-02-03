@@ -7,6 +7,7 @@ import {
   encrypt,
   genKeyPair,
   hashPublicKey,
+  maxMessageLength,
   randomString,
   sign,
   verify,
@@ -14,19 +15,13 @@ import {
 
 Deno.test("encrypt and decrypt", async () => {
   const { privateKey, publicKey } = await genKeyPair();
-  const data = longString();
+  const data = randomString(maxMessageLength);
   assertEquals(await decrypt(await encrypt(data, publicKey), privateKey), data);
 });
 
-const longString = () => {
-  let data = randomString();
-  for (let i = 0; i < 5; i++) data += data;
-  return data;
-};
-
 Deno.test("sign and verify", async () => {
   const { publicKey, privateKey } = await genKeyPair();
-  const data = longString();
+  const data = randomString(maxMessageLength);
   const signature = await sign(privateKey, data);
   assertEquals(await verify(publicKey, signature, data), true);
   assertEquals(
@@ -36,8 +31,9 @@ Deno.test("sign and verify", async () => {
 });
 
 Deno.test("generate a random string", () => {
-  assertEquals(typeof randomString(), "string");
-  assertNotEquals(randomString(), randomString());
+  assertEquals(typeof randomString(10), "string");
+  assertNotEquals(randomString(10), randomString(10));
+  assertEquals(randomString(10).length, 10);
 });
 
 Deno.test("hash public keys", async () => {

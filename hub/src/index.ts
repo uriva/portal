@@ -163,7 +163,7 @@ const start = async () => {
         hashPublicKey(serverKey.publicKey),
       );
     };
-    const challenge = randomString();
+    const challenge = randomString(10);
     sendMessageToClient(socket, { type: "challenge", payload: { challenge } });
     socket.on("close", () => {
       if (!socketPublicKey) return;

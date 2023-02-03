@@ -69,7 +69,7 @@ export const connectWithAcking = async ({
   });
   return ({ to, payload }: ClientToExterior) =>
     new Promise((resolve) => {
-      const msgId = crypto.randomString();
+      const msgId = crypto.randomString(10);
       console.log("created message id", msgId);
       acks.set(msgId, resolve);
       send({
