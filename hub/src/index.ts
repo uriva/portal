@@ -14,7 +14,6 @@ type ServerChallengeMessage = types.ServerChallengeMessage;
 type ServerRegularMessage = types.ServerRegularMessage;
 type ValidatedMessage = types.ValidatedMessage;
 
-type Certificate = crypto.Signature;
 type PublicKey = crypto.PublicKey;
 
 type RelayMessage = {
@@ -22,23 +21,12 @@ type RelayMessage = {
   payload: RegularMessagePayload;
 };
 
-type HubIdMessage = {
-  type: "hub-id";
-  payload: {
-    publicKey: PublicKey;
-    certificate: Certificate;
-  };
-};
-
-type HubToHubMessage = RelayMessage | HubIdMessage;
-
 type ServerOutgoingMessage =
   | ServerRegularMessage
   | ServerChallengeMessage
   | ValidatedMessage
-  | RelayMessage
   | NotValidatedMessage
-  | HubToHubMessage;
+  | RelayMessage;
 
 const publicKeyToSocket: Map<string, WebSocketClient[]> = new Map();
 
@@ -51,8 +39,9 @@ function set<K, V>(map: Map<K, V>, key: K, value: V) {
   return map;
 }
 
-function get<K, V>(map: Map<K, V>, key: K) {
-  return map.get(key);
+function get<K, V>(map: Map<K, V>, key: K): V {
+  if (!map.has(key)) throw "item not there";
+  return map.get(key) as V;
 }
 
 function getOrDefault<K, V>(defaultValue: V, map: Map<K, V>, key: K): V {
@@ -76,11 +65,6 @@ const connectToHubSocket = (id): Promise<WebSocketClient> => {
   console.error("not yet implemented");
 };
 
-const myIP = () => {
-  console.error("not yet implemented");
-  return "1.1.1.1";
-};
-
 // deno-lint-ignore no-unused-vars
 const redisAddToSet = (key: string, value: string): Promise<void> => {
   console.error("not yet implemented");
@@ -96,7 +80,7 @@ const redisGetFromSetOrEmptyArray = (key: string) => {
 };
 
 // deno-lint-ignore no-unused-vars
-const redisRemoveFromSet = (key: string) => {
+const redisRemoveFromSet = (key: string, value: string) => {
   console.error("not implemented");
 };
 
@@ -130,14 +114,28 @@ const resolvePeerHubSockets =
       }),
     );
 
+function removeAllFromArray<V>(arr: Array<V>, value: V) {
+  let i = 0;
+  while (i < arr.length) {
+    if (arr[i] === value) {
+      arr.splice(i, 1);
+    } else {
+      ++i;
+    }
+  }
+  return arr;
+}
+
 const sendMessageToClient = (
   socket: WebSocketClient,
   message: ServerOutgoingMessage,
 ) => socket.send(JSON.stringify(message));
 
+const portEnvPAram = "port";
+
 const start = async () => {
   const server = new WebSocketServer(
-    Deno.env.has("PORT") ? parseInt(Deno.env.get("PORT") as string) : 3000,
+    parseInt(Deno.env.get(portEnvPAram) || "3000"),
   );
 
   const serverKey = await genKeyPair();
@@ -145,7 +143,6 @@ const start = async () => {
   // Incoming connections might be from a client or another hub.
   server.on("connection", (socket) => {
     let socketPublicKey: null | PublicKey = null;
-    let isPeerHub = false;
     const setSocketPublicKey = (publicKey: PublicKey) => {
       socketPublicKey = publicKey;
       set(
@@ -165,45 +162,33 @@ const start = async () => {
     sendMessageToClient(socket, { type: "challenge", payload: { challenge } });
     socket.on("close", () => {
       if (!socketPublicKey) return;
-      // TODO(uri): we need a tiny event driven state management thing to replace this mess.
-      set(
-        publicKeyToSocket,
+      const arr = get(publicKeyToSocket, hashPublicKey(socketPublicKey));
+      if (arr) {
+        removeAllFromArray(arr, socket);
+      }
+      if (!arr.length) {
+        remove(publicKeyToSocket, hashPublicKey(socketPublicKey));
+      }
+      redisRemoveFromSet(
         hashPublicKey(socketPublicKey),
-        getOrDefault([], publicKeyToSocket, hashPublicKey(socketPublicKey))
-          .length === 1
-          ? []
-          : remove(publicKeyToSocket, hashPublicKey(socketPublicKey), socket),
+        hashPublicKey(serverKey.publicKey),
       );
-      redisRemoveFromSet(hashPublicKey(socketPublicKey), myIP());
       if (
-        get(publicKeyToSocket, hashPublicKey(socketPublicKey)) as Array<>.includes(socket)
+        (
+          get(
+            publicKeyToSocket,
+            hashPublicKey(socketPublicKey),
+          ) as Array<WebSocketClient>
+        ).includes(socket)
       ) {
         socket.close(1000);
         remove(publicKeyToSocket, hashPublicKey(socketPublicKey));
       }
     });
     socket.on("message", async (message) => {
-      const { type, payload }: ClientLibToServer | HubToHubMessage =
+      const { type, payload }: ClientLibToServer | RelayMessage =
         JSON.parse(message);
-      if (type === "hub-id") {
-        if (socketPublicKey) return;
-        const { publicKey, certificate } = payload;
-        if (await verify(publicKey, certificate, challenge)) {
-          if (has(publicKeyToSocket, hashPublicKey(publicKey))) {
-            get(publicKeyToSocket, hashPublicKey(publicKey)).forEach((s) =>
-              s.close(),
-            );
-          }
-          set(hubIdToSocket, hashPublicKey(publicKey), socket);
-          isPeerHub = true;
-          socketPublicKey = publicKey;
-          sendMessageToClient(socket, { type: "validated" });
-        } else {
-          sendMessageToClient(socket, { type: "bad-auth" });
-        }
-      }
       if (type === "relay") {
-        if (!isPeerHub) return;
         (get(publicKeyToSocket, hashPublicKey(payload.to)) || []).forEach(
           (socket) =>
             sendMessageToClient(socket, {
@@ -230,7 +215,6 @@ const start = async () => {
           return;
         }
         recordForRateLimitingAndBilling(socketPublicKey, to);
-        console.log("processing message", payload);
         getOrDefault([], publicKeyToSocket, hashPublicKey(to)).forEach(
           (socket) => {
             sendMessageToClient(socket, {

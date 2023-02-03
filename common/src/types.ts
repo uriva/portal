@@ -1,9 +1,9 @@
-import { PublicKey, Signature } from "./crypto.ts";
+import { EncryptedString, PublicKey, RandomString, Signature } from "./crypto.ts";
 
 export interface ServerChallengeMessage {
   type: "challenge";
   payload: {
-    challenge: string;
+    challenge: RandomString;
   };
 }
 
@@ -23,6 +23,7 @@ export interface NotValidatedMessage {
   type: "bad-auth";
 }
 
+// deno-lint-ignore no-explicit-any
 export type ClientMessage = any;
 
 export interface UnderEncryption {
@@ -33,7 +34,7 @@ export interface UnderEncryption {
 export interface RegularMessagePayload {
   certificate: Signature;
   to: PublicKey;
-  payload: UnderEncryption;
+  payload: EncryptedString;
 }
 
 export interface ServerRegularMessage {

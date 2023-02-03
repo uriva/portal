@@ -23,7 +23,7 @@ interface ClientToLib {
   payload: ClientMessage;
 }
 
-const signableString = (encryptedPayload, to) =>
+const signableString = (encryptedPayload: string, to: PublicKey) =>
   JSON.stringify({ payload: encryptedPayload, to });
 
 export const connect = ({
@@ -34,21 +34,21 @@ export const connect = ({
 }: ConnectOptions): Promise<(message: ClientToLib) => void> =>
   new Promise((resolve) => {
     const socket = new StandardWebSocketClient(
-      Deno.env.url || "ws://localhost:3000",
+      Deno.env.get("url") || "ws://localhost:3000",
     );
     const sendThroughSocket = (x: ClientLibToServer) =>
       socket.send(JSON.stringify(x));
-    socket.onopen = () => {
+    socket.on("open", () => {
       console.log("socket opened");
-    };
-    socket.onclose = onClose;
-    socket.onmessage = async ({ data }) => {
+    });
+    socket.on("close", onClose);
+    socket.on("message", async ({ data }) => {
       const message: ServerMessage = JSON.parse(data.toString());
       switch (message.type) {
         case "validated": {
           resolve(async ({ payload, to }: ClientToLib) => {
             const encryptedPayload = await encrypt(
-              JSON.stringify(payload),
+              JSON.stringify({ from: publicKey, payload }),
               publicKey,
             );
             const certificate = await sign(
@@ -59,7 +59,6 @@ export const connect = ({
               type: "message",
               payload: {
                 to,
-                from: publicKey,
                 payload: encryptedPayload,
                 certificate,
               },
@@ -80,6 +79,7 @@ export const connect = ({
         }
         case "message": {
           const { payload, certificate } = message.payload;
+          console.log("one", message);
           const underEncryption: types.UnderEncryption = JSON.parse(
             await decrypt(payload, privateKey),
           );
@@ -97,5 +97,5 @@ export const connect = ({
           return;
         }
       }
-    };
+    });
   });

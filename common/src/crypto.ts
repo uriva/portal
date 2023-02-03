@@ -3,8 +3,9 @@ import { cryptoRandomString } from "https://deno.land/x/crypto_random_string@1.0
 
 export type PrivateKey = { signing: JsonWebKey; encryption: JsonWebKey };
 export type PublicKey = { signing: JsonWebKey; encryption: JsonWebKey };
+export type EncryptedString = string;
 export type Signature = string;
-
+export type RandomString = string;
 export interface KeyPair {
   publicKey: PublicKey;
   privateKey: PrivateKey;
@@ -62,7 +63,10 @@ export const genKeyPair = async () => {
   };
 };
 
-export const encrypt = async (data: string, { encryption }: PublicKey) =>
+export const encrypt = async (
+  data: string,
+  { encryption }: PublicKey,
+): Promise<EncryptedString> =>
   crypto.subtle
     .encrypt(
       encryptAlgo,
@@ -73,7 +77,10 @@ export const encrypt = async (data: string, { encryption }: PublicKey) =>
     )
     .then(stringFromArrayBuffer);
 
-export const decrypt = async (data: string, { encryption }: PrivateKey) =>
+export const decrypt = async (
+  data: EncryptedString,
+  { encryption }: PrivateKey,
+) =>
   crypto.subtle
     .decrypt(
       encryptAlgo,
@@ -105,18 +112,20 @@ export const sign = async ({ signing }: PrivateKey, data: string) =>
     )
     .then(stringFromArrayBuffer);
 
-export const randomString = () => cryptoRandomString({ length: 64 });
+export const randomString = (): RandomString =>
+  cryptoRandomString({ length: 64 });
 
-const sortObjKeys = (x: { [index: string]: any }) =>
+type StrObject = { [index: string]: string };
+const sortObjKeys = (x: StrObject) =>
   Object.keys(x)
     .sort()
-    .reduce((acc: { [index: string]: any }, key) => {
+    .reduce((acc: { [index: string]: string }, key) => {
       acc[key] = x[key];
       return acc;
     }, {});
 
 const hashJWK = (x: JsonWebKey) =>
-  new Md5().update(JSON.stringify(sortObjKeys(x))).toString();
+  new Md5().update(JSON.stringify(sortObjKeys(x as StrObject))).toString();
 
 export const hashPublicKey = ({ encryption, signing }: PublicKey) =>
   hashJWK(encryption) + hashJWK(signing);
