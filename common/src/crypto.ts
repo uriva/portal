@@ -6,7 +6,7 @@ export type PublicKey = { signing: JsonWebKey; encryption: JsonWebKey };
 export type EncryptedShortString = string;
 export type EncryptedBigData = {
   encrypted: number[];
-  iv: Uint8Array;
+  iv: number[];
 };
 export type Signature = string;
 export type RandomString = string;
@@ -157,7 +157,7 @@ const encryptSymmetric = async (
 ): Promise<EncryptedBigData> => {
   const iv = window.crypto.getRandomValues(new Uint8Array(128 / 8));
   return {
-    iv,
+    iv: Array.from(iv),
     encrypted: Array.from(
       new Uint8Array(
         await window.crypto.subtle.encrypt(
@@ -185,7 +185,7 @@ export const decryptLongString = async (
     await window.crypto.subtle.decrypt(
       {
         ...symmetricAlgo,
-        iv,
+        iv: new Uint8Array(iv),
       },
       await crypto.subtle.importKey(
         format,

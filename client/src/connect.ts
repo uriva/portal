@@ -85,7 +85,6 @@ export const connect = ({
         }
         case "message": {
           const { payload, certificate } = message.payload;
-          console.log("one", message);
           const underEncryption: types.UnderEncryption = JSON.parse(
             await decryptLongString(privateKey, JSON.parse(payload)),
           );
