@@ -1,4 +1,4 @@
-import { Md5 } from "https://deno.land/std@0.119.0/hash/md5.ts";
+import { Sha256 } from "https://deno.land/std@0.119.0/hash/sha256.ts";
 import { cryptoRandomString } from "https://deno.land/x/crypto_random_string@1.0.0/mod.ts";
 
 export type PrivateKey = { signing: JsonWebKey; decryption: JsonWebKey };
@@ -135,11 +135,16 @@ const sortObjKeys = (x: StrObject) =>
       return acc;
     }, {});
 
-const hashJWK = (x: JsonWebKey) =>
-  new Md5().update(JSON.stringify(sortObjKeys(x as StrObject))).toString();
+const hashJWK = (x: JsonWebKey): Sha256 =>
+  new Sha256().update(JSON.stringify(sortObjKeys(x as StrObject)));
 
-export const hashPublicKey = ({ encryption, verification }: PublicKey) =>
-  hashJWK(encryption) + hashJWK(verification);
+export const hashPublicKey = (
+  { encryption, verification }: PublicKey,
+): string =>
+  new Sha256()
+    .update(hashJWK(encryption).arrayBuffer())
+    .update(hashJWK(verification).arrayBuffer())
+    .toString();
 
 export const comparePublicKeys = (p1: PublicKey, p2: PublicKey) =>
   hashPublicKey(p1) === hashPublicKey(p2);
