@@ -177,10 +177,6 @@ const symmetricAlgo = {
   name: "AES-CBC",
 };
 
-const log = (x: any) => {
-  console.log(x);
-  return x;
-};
 export const decryptLongString = async (
   privateKey: PrivateKey,
   { symmetricKey, data: { encrypted, iv } }: EncryptedStringWithSymmetricKey,
