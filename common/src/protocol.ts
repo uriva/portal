@@ -16,20 +16,19 @@ export type SecureShortMessage = {
   signer: string;
 };
 
-type PlainTextMessageFormat = {
-  // deno-lint-ignore no-explicit-any
-  data: any;
+type PlainTextMessage = {
+  data: unknown;
   from: string;
 };
 
 export const encryptAndSign = async (
   you: PublicKey,
   me: KeyPair,
-  data: string,
+  data: unknown,
 ): Promise<SecureShortMessage> => {
   const myPKHash = hashPublicKey(me.publicKey);
 
-  const message: PlainTextMessageFormat = {
+  const message: PlainTextMessage = {
     from: myPKHash,
     data,
   };
@@ -45,8 +44,7 @@ export const encryptAndSign = async (
 };
 
 export type VerifiedMessage = {
-  // deno-lint-ignore no-explicit-any
-  data: any;
+  data: unknown;
   from: PublicKey;
 };
 
@@ -70,7 +68,7 @@ export const verifyAndDecrypt = async (
   }
 
   // TODO: Type checking??
-  const plaintextMessage: PlainTextMessageFormat = JSON.parse(
+  const plaintextMessage: PlainTextMessage = JSON.parse(
     await decrypt(message.cipher, me.privateKey),
   );
 
