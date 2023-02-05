@@ -9,7 +9,7 @@ import {
   SignatureDoesNotMatchError,
   verifyAndDecrypt,
 } from "./protocol.ts";
-import { genKeyPair, hashPublicKey, sign } from "./crypto.ts";
+import { genKeyPair, sign } from "./crypto.ts";
 
 Deno.test("verify a secure message", async () => {
   const testMessage = "A test message!";
@@ -17,8 +17,6 @@ Deno.test("verify a secure message", async () => {
   const [senderKey, receiverKey] = await Promise.all(
     [genKeyPair(), genKeyPair()],
   );
-
-  const getSenderKey = (_: string) => senderKey.publicKey;
 
   const secureMessage = await encryptAndSign(
     receiverKey.publicKey,
@@ -29,7 +27,6 @@ Deno.test("verify a secure message", async () => {
   const recoveredMessage = await verifyAndDecrypt(
     receiverKey,
     secureMessage,
-    getSenderKey,
   );
 
   assert(recoveredMessage.isOk);
@@ -41,8 +38,6 @@ Deno.test("attacker fails to spoof a signature", async () => {
   const [senderKey, receiverKey, attackerKey] = await Promise.all(
     [genKeyPair(), genKeyPair(), genKeyPair()],
   );
-
-  const getAttackerKey = (_: string) => attackerKey.publicKey;
 
   const authenticMessage = await encryptAndSign(
     receiverKey.publicKey,
@@ -58,13 +53,12 @@ Deno.test("attacker fails to spoof a signature", async () => {
   const spoofedMessage = {
     cipher: authenticMessage.cipher,
     signature: spoofedSignature,
-    signer: hashPublicKey(attackerKey.publicKey),
+    signer: attackerKey.publicKey,
   };
 
   const recoveredMessage = await verifyAndDecrypt(
     receiverKey,
     spoofedMessage,
-    getAttackerKey,
   );
 
   assert(recoveredMessage.isErr);
@@ -78,8 +72,6 @@ Deno.test("attacker fails to tamper a message", async () => {
   const [senderKey, receiverKey] = await Promise.all(
     [genKeyPair(), genKeyPair()],
   );
-
-  const getSenderKey = (_: string) => senderKey.publicKey;
 
   const secureMessage = await encryptAndSign(
     receiverKey.publicKey,
@@ -96,7 +88,6 @@ Deno.test("attacker fails to tamper a message", async () => {
   const recoveredMessage = await verifyAndDecrypt(
     receiverKey,
     secureMessage,
-    getSenderKey,
   );
 
   assert(recoveredMessage.isErr);

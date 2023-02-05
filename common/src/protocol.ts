@@ -13,7 +13,7 @@ import {
 export type SecureShortMessage = {
   cipher: string;
   signature: string;
-  signer: string;
+  signer: PublicKey;
 };
 
 type PlainTextMessage = {
@@ -26,10 +26,8 @@ export const encryptAndSign = async (
   me: KeyPair,
   data: unknown,
 ): Promise<SecureShortMessage> => {
-  const myPKHash = hashPublicKey(me.publicKey);
-
   const message: PlainTextMessage = {
-    from: myPKHash,
+    from: hashPublicKey(me.publicKey),
     data,
   };
 
@@ -39,7 +37,7 @@ export const encryptAndSign = async (
   return {
     cipher,
     signature,
-    signer: myPKHash,
+    signer: me.publicKey,
   };
 };
 
@@ -58,15 +56,14 @@ export type VerificationError =
 export const verifyAndDecrypt = async (
   me: KeyPair,
   message: SecureShortMessage,
-  getPublicKeyFromHash: (arg0: string) => PublicKey,
 ): Promise<Result<VerifiedMessage, { reason: VerificationError }>> => {
-  const signer = getPublicKeyFromHash(message.signer);
-  const signatureMatches = await verify(
-    signer,
-    message.signature,
-    message.cipher,
-  );
-  if (!signatureMatches) {
+  if (
+    !await verify(
+      message.signer,
+      message.signature,
+      message.cipher,
+    )
+  ) {
     return err({ reason: SignatureDoesNotMatchError });
   }
 
@@ -75,12 +72,12 @@ export const verifyAndDecrypt = async (
     await decrypt(message.cipher, me.privateKey),
   );
 
-  if (message.signer != plaintextMessage.from) {
+  if (plaintextMessage.from != hashPublicKey(message.signer)) {
     return err({ reason: MessageNotFromSignerError });
   }
 
   return ok({
     data: plaintextMessage.data,
-    from: signer,
+    from: message.signer,
   });
 };
