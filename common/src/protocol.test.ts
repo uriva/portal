@@ -9,8 +9,9 @@ import { genKeyPair, hashPublicKey, sign } from "./crypto.ts";
 Deno.test("verify a secure message", async () => {
   const testMessage = "A test message!";
 
-  const senderKey = await genKeyPair();
-  const receiverKey = await genKeyPair();
+  const [senderKey, receiverKey] = await Promise.all(
+    [genKeyPair(), genKeyPair()],
+  );
 
   const getSenderKey = (_: string) => senderKey.publicKey;
 
@@ -32,9 +33,9 @@ Deno.test("verify a secure message", async () => {
 });
 
 Deno.test("attacker fails to spoof a signature", async () => {
-  const senderKey = await genKeyPair();
-  const receiverKey = await genKeyPair();
-  const attackerKey = await genKeyPair();
+  const [senderKey, receiverKey, attackerKey] = await Promise.all(
+    [genKeyPair(), genKeyPair(), genKeyPair()],
+  );
 
   const getAttackerKey = (_: string) => attackerKey.publicKey;
 
@@ -69,8 +70,9 @@ Deno.test("attacker fails to spoof a signature", async () => {
 });
 
 Deno.test("attacker fails to tamper a message", async () => {
-  const senderKey = await genKeyPair();
-  const receiverKey = await genKeyPair();
+  const [senderKey, receiverKey] = await Promise.all(
+    [genKeyPair(), genKeyPair()],
+  );
 
   const getSenderKey = (_: string) => senderKey.publicKey;
 
