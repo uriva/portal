@@ -52,7 +52,7 @@ export type VerifiedMessage = {
 
 export type VerificationError =
   | "signature doesn't match"
-  | "message wasn't from the pk that signed it";
+  | "message not from the public key that signed it";
 
 export const verifyAndDecrypt = async (
   me: KeyPair,
@@ -75,7 +75,7 @@ export const verifyAndDecrypt = async (
   );
 
   if (message.signer != plaintextMessage.from) {
-    return err({ reason: "message wasn't from the pk that signed it" });
+    return err({ reason: "message not from the public key that signed it" });
   }
 
   return ok({

@@ -64,7 +64,7 @@ Deno.test("attacker fails to spoof a signature", async () => {
   assert(recoveredMessage.isErr);
   assertEquals(
     recoveredMessage.error.reason,
-    "message wasn't from the pk that signed it",
+    "message not from the public key that signed it",
   );
 });
 
@@ -74,7 +74,7 @@ Deno.test("attacker fails to tamper a message", async () => {
 
   const getSenderKey = (_: string) => senderKey.publicKey;
 
-  let secureMessage = await encryptAndSign(
+  const secureMessage = await encryptAndSign(
     receiverKey.publicKey,
     senderKey,
     "A test message!",
