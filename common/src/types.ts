@@ -1,4 +1,7 @@
-import { EncryptedShortString, PublicKey, RandomString, Signature } from "./crypto.ts";
+export { err, ok, Result } from "npm:true-myth@6.2.0/result";
+
+import { PublicKey, RandomString, Signature } from "./crypto.ts";
+import { SecureMessage } from "./protocol.ts";
 
 export interface ServerChallengeMessage {
   type: "challenge";
@@ -26,15 +29,9 @@ export interface NotValidatedMessage {
 // deno-lint-ignore no-explicit-any
 export type ClientMessage = any;
 
-export interface UnderEncryption {
-  from: PublicKey;
-  payload: ClientMessage;
-}
-
 export interface RegularMessagePayload {
-  certificate: Signature;
   to: PublicKey;
-  payload: EncryptedShortString;
+  payload: SecureMessage;
 }
 
 export interface ServerRegularMessage {
