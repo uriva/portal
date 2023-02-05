@@ -1,8 +1,9 @@
 import { err, ok, Result } from "./types.ts";
 
 import {
-  decrypt,
-  encrypt,
+  decryptLongString,
+  EncryptedStringWithSymmetricKey,
+  encryptLongString,
   hashPublicKey,
   KeyPair,
   PublicKey,
@@ -10,8 +11,8 @@ import {
   verify,
 } from "./crypto.ts";
 
-export type SecureShortMessage = {
-  cipher: string;
+export type SecureMessage = {
+  cipher: EncryptedStringWithSymmetricKey;
   signature: string;
   signer: PublicKey;
 };
@@ -25,14 +26,14 @@ export const encryptAndSign = async (
   you: PublicKey,
   me: KeyPair,
   data: unknown,
-): Promise<SecureShortMessage> => {
+): Promise<SecureMessage> => {
   const message: PlainTextMessage = {
     from: hashPublicKey(me.publicKey),
     data,
   };
 
-  const cipher = await encrypt(JSON.stringify(message), you);
-  const signature = await sign(me.privateKey, cipher);
+  const cipher = await encryptLongString(you, JSON.stringify(message));
+  const signature = await sign(me.privateKey, JSON.stringify(cipher));
 
   return {
     cipher,
@@ -55,13 +56,13 @@ export type VerificationError =
 
 export const verifyAndDecrypt = async (
   me: KeyPair,
-  message: SecureShortMessage,
+  message: SecureMessage,
 ): Promise<Result<VerifiedMessage, { reason: VerificationError }>> => {
   if (
     !await verify(
       message.signer,
       message.signature,
-      message.cipher,
+      JSON.stringify(message.cipher),
     )
   ) {
     return err({ reason: SignatureDoesNotMatchError });
@@ -69,7 +70,7 @@ export const verifyAndDecrypt = async (
 
   // TODO: Type checking??
   const plaintextMessage: PlainTextMessage = JSON.parse(
-    await decrypt(message.cipher, me.privateKey),
+    await decryptLongString(me.privateKey, message.cipher),
   );
 
   if (plaintextMessage.from != hashPublicKey(message.signer)) {

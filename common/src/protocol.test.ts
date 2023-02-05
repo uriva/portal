@@ -34,6 +34,29 @@ Deno.test("verify a secure message", async () => {
   assertEquals(recoveredMessage.value.data, testMessage);
 });
 
+Deno.test("encrypt and verify a long message", async () => {
+  const longMessage = "A long message!".repeat(512);
+
+  const [senderKey, receiverKey] = await Promise.all(
+    [genKeyPair(), genKeyPair()],
+  );
+
+  const secureMessage = await encryptAndSign(
+    receiverKey.publicKey,
+    senderKey,
+    longMessage,
+  );
+
+  const recoveredMessage = await verifyAndDecrypt(
+    receiverKey,
+    secureMessage,
+  );
+
+  assert(recoveredMessage.isOk);
+  assertEquals(recoveredMessage.value.from, senderKey.publicKey);
+  assertEquals(recoveredMessage.value.data, longMessage);
+});
+
 Deno.test("attacker fails to spoof a signature", async () => {
   const [senderKey, receiverKey, attackerKey] = await Promise.all(
     [genKeyPair(), genKeyPair(), genKeyPair()],
@@ -47,7 +70,7 @@ Deno.test("attacker fails to spoof a signature", async () => {
 
   const spoofedSignature = await sign(
     attackerKey.privateKey,
-    authenticMessage.cipher,
+    JSON.stringify(authenticMessage.cipher),
   );
 
   const spoofedMessage = {
@@ -79,11 +102,8 @@ Deno.test("attacker fails to tamper a message", async () => {
     "A test message!",
   );
 
-  const spoofedCipher = "x" + secureMessage.cipher.substring(
-    1,
-    secureMessage.cipher.length,
-  );
-  secureMessage.cipher = spoofedCipher;
+  secureMessage.cipher.data.encrypted = secureMessage.cipher.data.encrypted
+    .slice(-1).concat(666);
 
   const recoveredMessage = await verifyAndDecrypt(
     receiverKey,
