@@ -1,13 +1,19 @@
 import { connect, genKeyPair } from "../../client/src/index.ts";
+import { hashPublicKey } from "../../common/src/crypto.ts";
+import { RegularMessagePayload } from "../../common/src/types.ts";
 
 const { publicKey, privateKey } = await genKeyPair();
 
 connect({
   publicKey,
   privateKey,
-  onMessage: ({ from, payload }) =>
+  onMessage: ({ from, data }) =>
     Promise.resolve(
-      console.log(JSON.stringify(from).slice(0, 10), "says", payload),
+      console.log(
+        hashPublicKey(from).slice(0, 10),
+        "says",
+        (data as RegularMessagePayload).payload,
+      ),
     ),
   onClose: () => {
     console.log("closed socket");
