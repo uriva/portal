@@ -48,9 +48,12 @@ export type VerifiedMessage = {
   from: PublicKey;
 };
 
+export const SignatureDoesNotMatchError = "signature doesn't match";
+export const MessageNotFromSignerError =
+  "message not from the public key that signed it";
 export type VerificationError =
-  | "signature doesn't match"
-  | "message not from the public key that signed it";
+  | typeof SignatureDoesNotMatchError
+  | typeof MessageNotFromSignerError;
 
 export const verifyAndDecrypt = async (
   me: KeyPair,
@@ -64,7 +67,7 @@ export const verifyAndDecrypt = async (
     message.cipher,
   );
   if (!signatureMatches) {
-    return err({ reason: "signature doesn't match" });
+    return err({ reason: SignatureDoesNotMatchError });
   }
 
   // TODO: Type checking??
@@ -73,7 +76,7 @@ export const verifyAndDecrypt = async (
   );
 
   if (message.signer != plaintextMessage.from) {
-    return err({ reason: "message not from the public key that signed it" });
+    return err({ reason: MessageNotFromSignerError });
   }
 
   return ok({

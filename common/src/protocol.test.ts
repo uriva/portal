@@ -3,7 +3,12 @@ import {
   assertEquals,
 } from "https://deno.land/std@0.174.0/testing/asserts.ts";
 
-import { encryptAndSign, verifyAndDecrypt } from "./protocol.ts";
+import {
+  encryptAndSign,
+  MessageNotFromSignerError,
+  SignatureDoesNotMatchError,
+  verifyAndDecrypt,
+} from "./protocol.ts";
 import { genKeyPair, hashPublicKey, sign } from "./crypto.ts";
 
 Deno.test("verify a secure message", async () => {
@@ -65,7 +70,7 @@ Deno.test("attacker fails to spoof a signature", async () => {
   assert(recoveredMessage.isErr);
   assertEquals(
     recoveredMessage.error.reason,
-    "message not from the public key that signed it",
+    MessageNotFromSignerError,
   );
 });
 
@@ -97,6 +102,6 @@ Deno.test("attacker fails to tamper a message", async () => {
   assert(recoveredMessage.isErr);
   assertEquals(
     recoveredMessage.error.reason,
-    "signature doesn't match",
+    SignatureDoesNotMatchError,
   );
 });
