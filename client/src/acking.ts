@@ -1,4 +1,4 @@
-import { crypto, types } from "../../common/src/index.ts";
+import { crypto, protocol, types } from "../../common/src/index.ts";
 
 import { connect } from "./connect.ts";
 
@@ -23,7 +23,7 @@ type AckProtocol = {
 export interface ConnectWithAckingOptions {
   publicKey: crypto.PublicKey;
   privateKey: crypto.PrivateKey;
-  onMessage: (message: types.UnderEncryption) => Promise<void>;
+  onMessage: (message: protocol.VerifiedMessage) => Promise<void>;
   onClose: () => void;
 }
 
@@ -39,8 +39,9 @@ export const connectWithAcking = async ({
   const send: (msg: AckProtocol) => void = await connect({
     publicKey,
     privateKey,
-    onMessage: (message: types.UnderEncryption) => {
-      const { type, payload }: AckProtocolPayload = message.payload;
+    onMessage: (message: protocol.VerifiedMessage) => {
+      const { type, payload }: AckProtocolPayload = message
+        .data as AckProtocolPayload;
       switch (type) {
         case "ack": {
           const callback = acks.get(payload.id);
@@ -49,11 +50,11 @@ export const connectWithAcking = async ({
             return;
           }
           callback();
-          acks.delete(message.payload.id);
+          acks.delete(payload.id);
           return;
         }
         case "message": {
-          onMessage({ from: message.from, payload }).then(() => {
+          onMessage({ from: message.from, data: payload }).then(() => {
             send({
               to: message.from,
               payload: {

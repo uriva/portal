@@ -17,7 +17,7 @@ export type SecureMessage = {
   signer: PublicKey;
 };
 
-type PlainTextMessage = {
+export type PlainTextMessage = {
   data: unknown;
   from: string;
 };
@@ -71,7 +71,7 @@ export const verifyAndDecrypt = async (
   // TODO: Type checking??
   const plaintextMessage: PlainTextMessage = JSON.parse(
     await decryptLongString(me.privateKey, message.cipher),
-  );
+  ) as PlainTextMessage;
 
   if (plaintextMessage.from != hashPublicKey(message.signer)) {
     return err({ reason: MessageNotFromSignerError });
