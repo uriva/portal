@@ -47,13 +47,9 @@ const arrayBufferFromString = (str: string): ArrayBuffer =>
 const exportJWK = (key: CryptoKey) => crypto.subtle.exportKey(format, key);
 
 export const genKeyPair = async () => {
-  const signingKeyPair = await crypto.subtle.generateKey(signAlgo, true, [
-    "sign",
-    "verify",
-  ]);
-  const encryptionKeyPair = await crypto.subtle.generateKey(encryptAlgo, true, [
-    "encrypt",
-    "decrypt",
+  const [signingKeyPair, encryptionKeyPair] = await Promise.all([
+    crypto.subtle.generateKey(signAlgo, true, ["sign", "verify"]),
+    crypto.subtle.generateKey(encryptAlgo, true, ["encrypt", "decrypt"]),
   ]);
   return {
     privateKey: {
@@ -173,9 +169,7 @@ const encryptSymmetric = async (
   };
 };
 
-const symmetricAlgo = {
-  name: "AES-CBC",
-};
+const symmetricAlgo = { name: "AES-CBC" };
 
 export const decryptLongString = async (
   privateKey: PrivateKey,
