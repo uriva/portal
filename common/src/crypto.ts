@@ -46,24 +46,17 @@ const arrayBufferFromString = (str: string): ArrayBuffer =>
 
 const exportJWK = (key: CryptoKey) => crypto.subtle.exportKey(format, key);
 
-export const genKeyPair =  () =>
+const exportKeyPair = ({ privateKey, publicKey }: CryptoKeyPair) =>
+  Promise.all([exportJWK(privateKey), exportJWK(publicKey)]);
+
+export const genKeyPair = () =>
   Promise.all([
     crypto.subtle
       .generateKey(signAlgo, true, ["sign", "verify"])
-      .then((signingKeyPair) =>
-        Promise.all([
-          exportJWK(signingKeyPair.privateKey),
-          exportJWK(signingKeyPair.publicKey),
-        ]),
-      ),
+      .then(exportKeyPair),
     crypto.subtle
       .generateKey(encryptAlgo, true, ["encrypt", "decrypt"])
-      .then((encryptionKeyPair) =>
-        Promise.all([
-          exportJWK(encryptionKeyPair.privateKey),
-          exportJWK(encryptionKeyPair.publicKey),
-        ]),
-      ),
+      .then(exportKeyPair),
   ]).then(([[privateSign, publicSign], [privateEncrypt, publicEncrypt]]) => ({
     privateKey: { signing: privateSign, encryption: privateEncrypt },
     publicKey: { signing: publicSign, encryption: publicEncrypt },
