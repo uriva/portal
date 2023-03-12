@@ -51,10 +51,7 @@ export const connectWithAcking = async ({
           onMessage({ from: message.from, payload }).then(() => {
             send({
               to: message.from,
-              payload: {
-                type: "ack",
-                payload: { id: payload.id },
-              },
+              payload: { type: "ack", payload: { id: payload.id } },
             });
           });
         }
