@@ -5,12 +5,7 @@ import { connect } from "./connect.ts";
 type ClientToExterior = { to: crypto.PublicKey; payload: types.ClientMessage };
 
 type AckProtocolPayload =
-  | {
-      type: "ack";
-      payload: {
-        id: string;
-      };
-    }
+  | { type: "ack"; payload: { id: string } }
   | {
       type: "message";
       payload: { id: string; payload: types.RegularMessagePayload };
