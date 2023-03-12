@@ -1,32 +1,38 @@
 import { connect, genKeyPair } from "../../client/src/index.ts";
 
-const { publicKey, privateKey } = await genKeyPair();
+// Imagine each of these segments happen on a different machine, with
+// arbitrary networking setup.
+// All Alice and Bob need to do to communicate is have the other party's public key
+// (a small serializable json).
+const alice = await genKeyPair();
+const bob = await genKeyPair();
 
 connect({
-  publicKey,
-  privateKey,
+  publicKey: alice.publicKey,
+  privateKey: alice.privateKey,
   onMessage: ({ from, payload }) =>
-    Promise.resolve(
-      console.log(JSON.stringify(from).slice(0, 10), "says", payload),
-    ),
-  onClose: () => {
-    console.log("closed socket");
-  },
+    Promise.resolve(console.log(`bob (${from}) says`, payload)),
+  onClose: () => {},
 }).then((sendMessage) => {
-  console.log("connection established");
-  try {
-    sendMessage({ to: publicKey, payload: "hello" }).then(() => {
-      console.log("first message arrived");
-    });
-    console.log("sent first message");
-    sendMessage({
-      to: publicKey,
-      payload: { text: "i can send json too" },
-    }).then(() => {
-      console.log("second message arrived");
-    });
-    console.log("sent second message");
-  } catch (e) {
-    console.error(e);
-  }
+  sendMessage({
+    to: bob.publicKey,
+    payload: { text: "hello Bob! I've sent you this small json" },
+  }).then(() => {
+    console.log("Bob has acked!");
+  });
+});
+
+connect({
+  publicKey: bob.publicKey,
+  privateKey: bob.privateKey,
+  onMessage: ({ from, payload }) =>
+    Promise.resolve(console.log(`alice (${from}) says`, payload)),
+  onClose: () => {},
+}).then((sendMessage) => {
+  sendMessage({
+    to: alice.publicKey,
+    payload: "hello alice here's a string message",
+  }).then(() => {
+    console.log("Alice has acked!");
+  });
 });
