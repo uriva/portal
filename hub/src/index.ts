@@ -3,6 +3,15 @@ import {
   WebSocketServer,
 } from "https://deno.land/x/websocket@v0.1.4/mod.ts";
 import { comparePublicKeys, genKeyPair } from "../../common/src/crypto.ts";
+import {
+  conj,
+  get,
+  getOrDefault,
+  has,
+  remove,
+  removeAllFromArray,
+  set,
+} from "../../common/src/utils.ts";
 import { crypto, types } from "../../common/src/index.ts";
 
 const { randomString, verify, hashPublicKey } = crypto;
@@ -29,29 +38,6 @@ type ServerOutgoingMessage =
   | RelayMessage;
 
 const publicKeyToSocket: Map<string, WebSocketClient[]> = new Map();
-
-const conj = <T>(arr: Array<T>, x: T) => [...arr, x];
-
-const set = <K, V>(map: Map<K, V>, key: K, value: V) => {
-  map.set(key, value);
-  return map;
-};
-
-const get = <K, V>(map: Map<K, V>, key: K): V => {
-  if (!map.has(key)) throw "item not there";
-  return map.get(key) as V;
-};
-
-const getOrDefault = <K, V>(defaultValue: V, map: Map<K, V>, key: K): V =>
-  has(map, key) ? (get(map, key) as V) : defaultValue;
-
-const has = <K, V>(map: Map<K, V>, key: K) => map.has(key);
-
-const remove = <K, V>(mapping: Map<K, V>, key: K) => {
-  const newMapping = { ...mapping };
-  newMapping.delete(key);
-  return newMapping;
-};
 
 const connectAndReturnSocketForPeerHub = (
   // deno-lint-ignore no-unused-vars
@@ -111,18 +97,6 @@ const resolvePeerHubSockets =
         return get(publicKeyToSocket, id);
       }),
     );
-
-const removeAllFromArray = <V>(arr: Array<V>, value: V) => {
-  let i = 0;
-  while (i < arr.length) {
-    if (arr[i] === value) {
-      arr.splice(i, 1);
-    } else {
-      ++i;
-    }
-  }
-  return arr;
-};
 
 const sendMessageToClient = (
   socket: WebSocketClient,
