@@ -8,7 +8,7 @@ Typical quotes:
 - "Actually I need two way communication, so now I need to have a socket alongside my http connections. Shit. 🤦"
 - "I can't get the messages to go through this firewallu."
 
-It is a sad fact that even when you just want to pass messages from point A to point B, you need to consider the surrounding environment:
+It is a sad fact that even when you just want to pass messages from point A to point B, you need to consider t he surrounding environment:
 
 1. static ips or domain
 2. opening ports to the hosting machine
