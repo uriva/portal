@@ -36,25 +36,22 @@ export const connectWithAcking = async ({
     privateKey,
     onMessage: (message: types.UnderEncryption) => {
       const { type, payload }: AckProtocolPayload = message.payload;
-      switch (type) {
-        case "ack": {
-          const callback = acks.get(payload.id);
-          if (!callback) {
-            console.error("missing entry for ack");
-            return;
-          }
-          callback();
-          acks.delete(message.payload.id);
+      if (type === "ack") {
+        const callback = acks.get(payload.id);
+        if (!callback) {
+          console.error("missing entry for ack");
           return;
         }
-        case "message": {
-          onMessage({ from: message.from, payload }).then(() => {
-            send({
-              to: message.from,
-              payload: { type: "ack", payload: { id: payload.id } },
-            });
+        callback();
+        acks.delete(message.payload.id);
+      }
+      if (type === "message") {
+        onMessage({ from: message.from, payload }).then(() => {
+          send({
+            to: message.from,
+            payload: { type: "ack", payload: { id: payload.id } },
           });
-        }
+        });
       }
     },
     onClose,
