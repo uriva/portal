@@ -46,22 +46,28 @@ const arrayBufferFromString = (str: string): ArrayBuffer =>
 
 const exportJWK = (key: CryptoKey) => crypto.subtle.exportKey(format, key);
 
-export const genKeyPair = async () => {
-  const [signingKeyPair, encryptionKeyPair] = await Promise.all([
-    crypto.subtle.generateKey(signAlgo, true, ["sign", "verify"]),
-    crypto.subtle.generateKey(encryptAlgo, true, ["encrypt", "decrypt"]),
-  ]);
-  return {
-    privateKey: {
-      signing: await exportJWK(signingKeyPair.privateKey),
-      encryption: await exportJWK(encryptionKeyPair.privateKey),
-    },
-    publicKey: {
-      signing: await exportJWK(signingKeyPair.publicKey),
-      encryption: await exportJWK(encryptionKeyPair.publicKey),
-    },
-  };
-};
+export const genKeyPair =  () =>
+  Promise.all([
+    crypto.subtle
+      .generateKey(signAlgo, true, ["sign", "verify"])
+      .then((signingKeyPair) =>
+        Promise.all([
+          exportJWK(signingKeyPair.privateKey),
+          exportJWK(signingKeyPair.publicKey),
+        ]),
+      ),
+    crypto.subtle
+      .generateKey(encryptAlgo, true, ["encrypt", "decrypt"])
+      .then((encryptionKeyPair) =>
+        Promise.all([
+          exportJWK(encryptionKeyPair.privateKey),
+          exportJWK(encryptionKeyPair.publicKey),
+        ]),
+      ),
+  ]).then(([[privateSign, publicSign], [privateEncrypt, publicEncrypt]]) => ({
+    privateKey: { signing: privateSign, encryption: privateEncrypt },
+    publicKey: { signing: publicSign, encryption: publicEncrypt },
+  }));
 
 export const encrypt = async (
   data: string,
