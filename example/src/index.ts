@@ -7,29 +7,29 @@ import { connect, genKeyPair } from "../../client/src/index.ts";
 const alice = await genKeyPair();
 const bob = await genKeyPair();
 
-connect({
-  publicKey: alice.publicKey,
-  privateKey: alice.privateKey,
-  onMessage: ({ from, payload }) =>
-    Promise.resolve(console.log(`bob (${from}) says`, payload)),
-  onClose: () => {},
-}).then((sendMessage) => {
-  sendMessage({
+Promise.all([
+  connect({
+    publicKey: alice.publicKey,
+    privateKey: alice.privateKey,
+    onMessage: ({ from, payload }) =>
+      Promise.resolve(console.log(`bob (${from}) says`, payload)),
+    onClose: () => {},
+  }),
+  connect({
+    publicKey: bob.publicKey,
+    privateKey: bob.privateKey,
+    onMessage: ({ from, payload }) =>
+      Promise.resolve(console.log(`alice (${from}) says`, payload)),
+    onClose: () => {},
+  }),
+]).then(([aliceSendMessage, bobSendMessage]) => {
+  aliceSendMessage({
     to: bob.publicKey,
     payload: { text: "hello Bob! I've sent you this small json" },
   }).then(() => {
     console.log("Bob has acked!");
   });
-});
-
-connect({
-  publicKey: bob.publicKey,
-  privateKey: bob.privateKey,
-  onMessage: ({ from, payload }) =>
-    Promise.resolve(console.log(`alice (${from}) says`, payload)),
-  onClose: () => {},
-}).then((sendMessage) => {
-  sendMessage({
+  bobSendMessage({
     to: alice.publicKey,
     payload: "hello alice here's a string message",
   }).then(() => {
