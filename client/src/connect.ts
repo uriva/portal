@@ -48,59 +48,52 @@ export const connect = ({
     socket.on("close", onClose);
     socket.on("message", async ({ data }) => {
       const message: ServerMessage = JSON.parse(data.toString());
-      switch (message.type) {
-        case "validated": {
-          resolve(async ({ payload, to }: ClientToLib) => {
-            const encrypted = JSON.stringify(
-              await encryptLongString(
-                publicKey,
-                JSON.stringify({ from: publicKey, payload }),
-              ),
-            );
-            const certificate = await sign(
-              privateKey,
-              signableString(encrypted, to),
-            );
-            sendThroughSocket({
-              type: "message",
-              payload: {
-                to,
-                payload: encrypted,
-                certificate,
-              },
-            });
-          });
-          return;
-        }
-        case "challenge": {
-          const { challenge } = message.payload;
-          sendThroughSocket({
-            type: "id",
-            payload: {
+      if (message.type === "validated") {
+        resolve(async ({ payload, to }: ClientToLib) => {
+          const encrypted = JSON.stringify(
+            await encryptLongString(
               publicKey,
-              certificate: await sign(privateKey, challenge),
+              JSON.stringify({ from: publicKey, payload }),
+            ),
+          );
+          const certificate = await sign(
+            privateKey,
+            signableString(encrypted, to),
+          );
+          sendThroughSocket({
+            type: "message",
+            payload: {
+              to,
+              payload: encrypted,
+              certificate,
             },
           });
-          return;
-        }
-        case "message": {
-          const { payload, certificate } = message.payload;
-          const underEncryption: types.UnderEncryption = JSON.parse(
-            await decryptLongString(privateKey, JSON.parse(payload)),
-          );
-          if (
-            await verify(
-              underEncryption.from,
-              certificate,
-              signableString(payload, publicKey),
-            )
-          ) {
-            onMessage(underEncryption);
-          } else {
-            console.error("ignoring a message with bad certificate");
-          }
-          return;
-        }
+        });
+      }
+      if (message.type === "challenge") {
+        const { challenge } = message.payload;
+        sendThroughSocket({
+          type: "id",
+          payload: {
+            publicKey,
+            certificate: await sign(privateKey, challenge),
+          },
+        });
+      }
+      if (message.type === "message") {
+        const { payload, certificate } = message.payload;
+        const underEncryption: types.UnderEncryption = JSON.parse(
+          await decryptLongString(privateKey, JSON.parse(payload)),
+        );
+        if (
+          await verify(
+            underEncryption.from,
+            certificate,
+            signableString(payload, publicKey),
+          )
+        )
+          onMessage(underEncryption);
+        else console.error("ignoring a message with bad certificate");
       }
     });
   });
