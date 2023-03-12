@@ -30,35 +30,28 @@ type ServerOutgoingMessage =
 
 const publicKeyToSocket: Map<string, WebSocketClient[]> = new Map();
 
-function conj<T>(arr: Array<T>, x: T) {
-  return [...arr, x];
-}
+const conj = <T>(arr: Array<T>, x: T) => [...arr, x];
 
-function set<K, V>(map: Map<K, V>, key: K, value: V) {
+const set = <K, V>(map: Map<K, V>, key: K, value: V) => {
   map.set(key, value);
   return map;
-}
+};
 
-function get<K, V>(map: Map<K, V>, key: K): V {
+const get = <K, V>(map: Map<K, V>, key: K): V => {
   if (!map.has(key)) throw "item not there";
   return map.get(key) as V;
-}
+};
 
-function getOrDefault<K, V>(defaultValue: V, map: Map<K, V>, key: K): V {
-  if (has(map, key)) {
-    return get(map, key) as V;
-  }
-  return defaultValue;
-}
-function has<K, V>(map: Map<K, V>, key: K) {
-  return map.has(key);
-}
+const getOrDefault = <K, V>(defaultValue: V, map: Map<K, V>, key: K): V =>
+  has(map, key) ? (get(map, key) as V) : defaultValue;
 
-function remove<K, V>(mapping: Map<K, V>, key: K) {
+const has = <K, V>(map: Map<K, V>, key: K) => map.has(key);
+
+const remove = <K, V>(mapping: Map<K, V>, key: K) => {
   const newMapping = { ...mapping };
   newMapping.delete(key);
   return newMapping;
-}
+};
 
 const connectAndReturnSocketForPeerHub = (
   // deno-lint-ignore no-unused-vars
@@ -119,7 +112,7 @@ const resolvePeerHubSockets =
       }),
     );
 
-function removeAllFromArray<V>(arr: Array<V>, value: V) {
+const removeAllFromArray = <V>(arr: Array<V>, value: V) => {
   let i = 0;
   while (i < arr.length) {
     if (arr[i] === value) {
@@ -129,7 +122,7 @@ function removeAllFromArray<V>(arr: Array<V>, value: V) {
     }
   }
   return arr;
-}
+};
 
 const sendMessageToClient = (
   socket: WebSocketClient,
