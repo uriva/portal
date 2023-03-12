@@ -11,10 +11,8 @@ type AckProtocolPayload =
       payload: { id: string; payload: types.RegularMessagePayload };
     };
 
-type AckProtocol = {
-  to: crypto.PublicKey;
-  payload: AckProtocolPayload;
-};
+type AckProtocol = { to: crypto.PublicKey; payload: AckProtocolPayload };
+
 export interface ConnectWithAckingOptions {
   publicKey: crypto.PublicKey;
   privateKey: crypto.PrivateKey;
