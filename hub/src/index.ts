@@ -124,21 +124,51 @@ const forwardMessage = async (
   );
 };
 
+const onClientMessage =
+  (
+    socket: WebSocketClient,
+    serverKey: KeyPair,
+    challenge: string,
+    socketIdentity: () => PublicKey | null,
+    setSocketIdentity: (pk: PublicKey) => void,
+  ) =>
+  async (message: string) => {
+    const { type, payload }: ClientLibToServer | RelayMessage =
+      JSON.parse(message);
+    if (type === "relay") {
+      (get(publicKeyToSocket, hashPublicKey(payload.to)) || []).forEach(
+        sendMessageToClient({ type: "message", payload }),
+      );
+    }
+    if (type === "id") {
+      if (socketIdentity()) return; // A socket will serve only one publicKey until its death.
+      const { publicKey, certificate } = payload;
+      console.log("identifying client");
+      if (await verify(publicKey, certificate, challenge)) {
+        setSocketIdentity(publicKey);
+        sendMessageToClient({ type: "validated" })(socket);
+      } else {
+        sendMessageToClient({ type: "bad-auth" })(socket);
+      }
+    }
+    if (type === "message") {
+      const socketId = socketIdentity();
+      if (!socketId) return; // Unauthenticated sockets are not to be used.
+      const { to } = payload;
+      if (!canSendMessage(socketId, to)) {
+        return;
+      }
+      console.log(
+        `got message from ${logPubKey(socketId)} to ${logPubKey(to)}`,
+      );
+      recordForRateLimitingAndBilling(socketId, to);
+      forwardMessage(serverKey, to, payload);
+    }
+  };
+
 // Incoming connections might be from a client or another hub.
 const onClientConnect = (serverKey: KeyPair) => (socket: WebSocketClient) => {
   let socketPublicKey: null | PublicKey = null;
-  const setSocketPublicKey = (publicKey: PublicKey) => {
-    socketPublicKey = publicKey;
-    set(
-      publicKeyToSocket,
-      hashPublicKey(publicKey),
-      conj(
-        getOrDefault([], publicKeyToSocket, hashPublicKey(publicKey)),
-        socket,
-      ),
-    );
-    redisAddToSet(hashPublicKey(publicKey), hashPublicKey(serverKey.publicKey));
-  };
   const challenge = randomString(10);
   sendMessageToClient({ type: "challenge", payload: { challenge } })(socket);
   socket.on("close", () => {
@@ -166,38 +196,30 @@ const onClientConnect = (serverKey: KeyPair) => (socket: WebSocketClient) => {
       remove(publicKeyToSocket, hashPublicKey(socketPublicKey));
     }
   });
-  socket.on("message", async (message) => {
-    const { type, payload }: ClientLibToServer | RelayMessage =
-      JSON.parse(message);
-    if (type === "relay") {
-      (get(publicKeyToSocket, hashPublicKey(payload.to)) || []).forEach(
-        sendMessageToClient({ type: "message", payload }),
-      );
-    }
-    if (type === "id") {
-      if (socketPublicKey) return; // A socket will serve only one publicKey until its death.
-      const { publicKey, certificate } = payload;
-      console.log("identifying client");
-      if (await verify(publicKey, certificate, challenge)) {
-        setSocketPublicKey(publicKey);
-        sendMessageToClient({ type: "validated" })(socket);
-      } else {
-        sendMessageToClient({ type: "bad-auth" })(socket);
-      }
-    }
-    if (type === "message") {
-      if (!socketPublicKey) return; // Unauthenticated sockets are not to be used.
-      const { to } = payload;
-      if (!canSendMessage(socketPublicKey, to)) {
-        return;
-      }
-      console.log(
-        `got message from ${logPubKey(socketPublicKey)} to ${logPubKey(to)}`,
-      );
-      recordForRateLimitingAndBilling(socketPublicKey, to);
-      forwardMessage(serverKey, to, payload);
-    }
-  });
+  socket.on(
+    "message",
+    onClientMessage(
+      socket,
+      serverKey,
+      challenge,
+      () => socketPublicKey,
+      (publicKey: PublicKey) => {
+        socketPublicKey = publicKey;
+        set(
+          publicKeyToSocket,
+          hashPublicKey(publicKey),
+          conj(
+            getOrDefault([], publicKeyToSocket, hashPublicKey(publicKey)),
+            socket,
+          ),
+        );
+        redisAddToSet(
+          hashPublicKey(publicKey),
+          hashPublicKey(serverKey.publicKey),
+        );
+      },
+    ),
+  );
 };
 
 const start = (serverKey: KeyPair) => {
