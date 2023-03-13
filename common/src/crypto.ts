@@ -210,3 +210,5 @@ export const encryptLongString = async (
   ]);
   return { data, symmetricKey };
 };
+
+export const logPubKey = (key: PublicKey) => key.encryption.n.slice(0, 10);

@@ -2,7 +2,11 @@ import {
   WebSocketClient,
   WebSocketServer,
 } from "https://deno.land/x/websocket@v0.1.4/mod.ts";
-import { comparePublicKeys, genKeyPair } from "../../common/src/crypto.ts";
+import {
+  comparePublicKeys,
+  genKeyPair,
+  logPubKey,
+} from "../../common/src/crypto.ts";
 import {
   conj,
   get,
@@ -186,6 +190,9 @@ const start = async () => {
         if (!canSendMessage(socketPublicKey, to)) {
           return;
         }
+        console.log(
+          `got message from ${logPubKey(socketPublicKey)} to ${logPubKey(to)}`,
+        );
         recordForRateLimitingAndBilling(socketPublicKey, to);
         getOrDefault([], publicKeyToSocket, hashPublicKey(to)).forEach(
           (socket) => {
