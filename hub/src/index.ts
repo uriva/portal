@@ -2,7 +2,7 @@ import {
   KeyPair,
   comparePublicKeys,
   genKeyPair,
-  logPubKey,
+  pubKeyShortStr,
 } from "../../common/src/crypto.ts";
 import {
   WebSocketClient,
@@ -157,7 +157,7 @@ const onClientMessage =
       const { to } = payload;
       if (!canSendMessage(socketId, to)) return;
       console.log(
-        `got message from ${logPubKey(socketId)} to ${logPubKey(to)}`,
+        `got message from ${pubKeyShortStr(socketId)} to ${pubKeyShortStr(to)}`,
       );
       recordForRateLimitingAndBilling(socketId, to);
       forwardMessage(serverKey, to, payload);

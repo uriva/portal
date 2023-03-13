@@ -153,12 +153,9 @@ const encryptSymmetric = async (
     encrypted: Array.from(
       new Uint8Array(
         await window.crypto.subtle.encrypt(
-          {
-            name: "AES-CBC",
-            iv,
-          },
+          { name: "AES-CBC", iv },
           key,
-          new TextEncoder().encode(data),
+          stringEncode(data),
         ),
       ),
     ),
@@ -205,4 +202,5 @@ export const encryptLongString = async (
   return { data, symmetricKey };
 };
 
-export const logPubKey = (key: PublicKey) => key.encryption.n.slice(0, 10);
+export const pubKeyShortStr = ({ encryption }: PublicKey) =>
+  encryption.n && encryption.n.slice(0, 10);

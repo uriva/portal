@@ -1,6 +1,6 @@
 import { connect, genKeyPair } from "../../client/src/index.ts";
 
-import { logPubKey } from "../../common/src/crypto.ts";
+import { pubKeyShortStr } from "../../common/src/crypto.ts";
 
 // Imagine each of these segments happen on a different machine, with
 // arbitrary networking setup.
@@ -14,14 +14,14 @@ Promise.all([
     publicKey: alice.publicKey,
     privateKey: alice.privateKey,
     onMessage: ({ from, payload }) =>
-      Promise.resolve(console.log(`bob (${logPubKey(from)}) says`, payload)),
+      Promise.resolve(console.log(`bob (${pubKeyShortStr(from)}) says`, payload)),
     onClose: () => {},
   }),
   connect({
     publicKey: bob.publicKey,
     privateKey: bob.privateKey,
     onMessage: ({ from, payload }) =>
-      Promise.resolve(console.log(`alice (${logPubKey(from)}) says`, payload)),
+      Promise.resolve(console.log(`alice (${pubKeyShortStr(from)}) says`, payload)),
     onClose: () => {},
   }),
 ]).then(([aliceSendMessage, bobSendMessage]) => {
