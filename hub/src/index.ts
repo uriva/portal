@@ -155,9 +155,7 @@ const onClientMessage =
       const socketId = socketIdentity();
       if (!socketId) return; // Unauthenticated sockets are not to be used.
       const { to } = payload;
-      if (!canSendMessage(socketId, to)) {
-        return;
-      }
+      if (!canSendMessage(socketId, to)) return;
       console.log(
         `got message from ${logPubKey(socketId)} to ${logPubKey(to)}`,
       );

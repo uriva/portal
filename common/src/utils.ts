@@ -35,3 +35,8 @@ export const removeAllFromArray = <V>(arr: Array<V>, value: V) => {
   }
   return arr;
 };
+
+export const sideLog = <T>(x: T) => {
+  console.log(x);
+  return x;
+};

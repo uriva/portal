@@ -8,6 +8,7 @@ import {
 
 import { ServerRegularMessage } from "../../common/src/types.ts";
 import { StandardWebSocketClient } from "https://deno.land/x/websocket@v0.1.4/mod.ts";
+import { sideLog } from "../../common/src/utils.ts";
 
 type ServerMessage = types.ServerMessage;
 type ClientMessage = types.ClientMessage;

@@ -1,5 +1,6 @@
 import { Md5 } from "https://deno.land/std@0.119.0/hash/md5.ts";
 import { cryptoRandomString } from "https://deno.land/x/crypto_random_string@1.0.0/mod.ts";
+import { sideLog } from "./utils.ts";
 
 export type PrivateKey = { signing: JsonWebKey; encryption: JsonWebKey };
 export type PublicKey = { signing: JsonWebKey; encryption: JsonWebKey };
@@ -137,14 +138,10 @@ export const comparePublicKeys = (p1: PublicKey, p2: PublicKey) =>
   hashPublicKey(p1) === hashPublicKey(p2);
 
 const createSymmetricKey = () =>
-  crypto.subtle.generateKey(
-    {
-      name: "AES-CBC",
-      length: 128,
-    },
-    true,
-    ["encrypt", "decrypt"],
-  );
+  crypto.subtle.generateKey({ name: "AES-CBC", length: 128 }, true, [
+    "encrypt",
+    "decrypt",
+  ]);
 
 const encryptSymmetric = async (
   key: CryptoKey,
@@ -176,10 +173,7 @@ export const decryptLongString = async (
 ) =>
   new TextDecoder().decode(
     await window.crypto.subtle.decrypt(
-      {
-        ...symmetricAlgo,
-        iv: new Uint8Array(iv),
-      },
+      { ...symmetricAlgo, iv: new Uint8Array(iv) },
       await crypto.subtle.importKey(
         format,
         JSON.parse(await decrypt(symmetricKey, privateKey)),
