@@ -1,12 +1,13 @@
 import {
-  WebSocketClient,
-  WebSocketServer,
-} from "https://deno.land/x/websocket@v0.1.4/mod.ts";
-import {
+  KeyPair,
   comparePublicKeys,
   genKeyPair,
   logPubKey,
 } from "../../common/src/crypto.ts";
+import {
+  WebSocketClient,
+  WebSocketServer,
+} from "https://deno.land/x/websocket@v0.1.4/mod.ts";
 import {
   conj,
   get,
@@ -102,12 +103,26 @@ const resolvePeerHubSockets =
       }),
     );
 
-const sendMessageToClient = (
-  socket: WebSocketClient,
-  message: ServerOutgoingMessage,
-) => socket.send(JSON.stringify(message));
+const sendMessageToClient =
+  (message: ServerOutgoingMessage) => (socket: WebSocketClient) =>
+    socket.send(JSON.stringify(message));
 
 const portEnvPAram = "port";
+
+const forwardMessage = async (
+  serverKey: KeyPair,
+  to: PublicKey,
+  payload: RegularMessagePayload,
+) => {
+  getOrDefault([], publicKeyToSocket, hashPublicKey(to)).forEach(
+    sendMessageToClient({ type: "message", payload }),
+  );
+  (await resolvePeerHubSockets(serverKey.publicKey)(to)).map(
+    (sockets) =>
+      sockets &&
+      sockets.forEach(sendMessageToClient({ type: "relay", payload })),
+  );
+};
 
 const start = async () => {
   const server = new WebSocketServer(
@@ -135,7 +150,7 @@ const start = async () => {
       );
     };
     const challenge = randomString(10);
-    sendMessageToClient(socket, { type: "challenge", payload: { challenge } });
+    sendMessageToClient({ type: "challenge", payload: { challenge } })(socket);
     socket.on("close", () => {
       if (!socketPublicKey) return;
       const arr = get(publicKeyToSocket, hashPublicKey(socketPublicKey));
@@ -166,11 +181,7 @@ const start = async () => {
         JSON.parse(message);
       if (type === "relay") {
         (get(publicKeyToSocket, hashPublicKey(payload.to)) || []).forEach(
-          (socket) =>
-            sendMessageToClient(socket, {
-              type: "message",
-              payload,
-            }),
+          sendMessageToClient({ type: "message", payload }),
         );
       }
       if (type === "id") {
@@ -179,9 +190,9 @@ const start = async () => {
         console.log("identifying client");
         if (await verify(publicKey, certificate, challenge)) {
           setSocketPublicKey(publicKey);
-          sendMessageToClient(socket, { type: "validated" });
+          sendMessageToClient({ type: "validated" })(socket);
         } else {
-          sendMessageToClient(socket, { type: "bad-auth" });
+          sendMessageToClient({ type: "bad-auth" })(socket);
         }
       }
       if (type === "message") {
@@ -194,24 +205,7 @@ const start = async () => {
           `got message from ${logPubKey(socketPublicKey)} to ${logPubKey(to)}`,
         );
         recordForRateLimitingAndBilling(socketPublicKey, to);
-        getOrDefault([], publicKeyToSocket, hashPublicKey(to)).forEach(
-          (socket) => {
-            sendMessageToClient(socket, {
-              type: "message",
-              payload,
-            });
-          },
-        );
-        (await resolvePeerHubSockets(serverKey.publicKey)(to)).map(
-          (sockets) =>
-            sockets &&
-            sockets.forEach((socket) =>
-              sendMessageToClient(socket, {
-                type: "relay",
-                payload,
-              }),
-            ),
-        );
+        forwardMessage(serverKey, to, payload);
       }
     });
   });
