@@ -16,7 +16,6 @@ await build({
     crypto: true,
   },
   package: {
-    // package.json properties
     name: "portal",
     version: Deno.args[0],
     description: "Your package.",
