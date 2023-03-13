@@ -124,90 +124,87 @@ const forwardMessage = async (
   );
 };
 
-const start = async () => {
-  const server = new WebSocketServer(
-    parseInt(Deno.env.get(portEnvPAram) || "3000"),
-  );
-
-  const serverKey = await genKeyPair();
-
-  // Incoming connections might be from a client or another hub.
-  server.on("connection", (socket) => {
-    let socketPublicKey: null | PublicKey = null;
-    const setSocketPublicKey = (publicKey: PublicKey) => {
-      socketPublicKey = publicKey;
-      set(
-        publicKeyToSocket,
-        hashPublicKey(publicKey),
-        conj(
-          getOrDefault([], publicKeyToSocket, hashPublicKey(publicKey)),
-          socket,
-        ),
+// Incoming connections might be from a client or another hub.
+const onClientConnect = (serverKey: KeyPair) => (socket: WebSocketClient) => {
+  let socketPublicKey: null | PublicKey = null;
+  const setSocketPublicKey = (publicKey: PublicKey) => {
+    socketPublicKey = publicKey;
+    set(
+      publicKeyToSocket,
+      hashPublicKey(publicKey),
+      conj(
+        getOrDefault([], publicKeyToSocket, hashPublicKey(publicKey)),
+        socket,
+      ),
+    );
+    redisAddToSet(hashPublicKey(publicKey), hashPublicKey(serverKey.publicKey));
+  };
+  const challenge = randomString(10);
+  sendMessageToClient({ type: "challenge", payload: { challenge } })(socket);
+  socket.on("close", () => {
+    if (!socketPublicKey) return;
+    const arr = get(publicKeyToSocket, hashPublicKey(socketPublicKey));
+    if (arr) {
+      removeAllFromArray(arr, socket);
+    }
+    if (!arr.length) {
+      remove(publicKeyToSocket, hashPublicKey(socketPublicKey));
+    }
+    redisRemoveFromSet(
+      hashPublicKey(socketPublicKey),
+      hashPublicKey(serverKey.publicKey),
+    );
+    if (
+      (
+        get(
+          publicKeyToSocket,
+          hashPublicKey(socketPublicKey),
+        ) as Array<WebSocketClient>
+      ).includes(socket)
+    ) {
+      socket.close(1000);
+      remove(publicKeyToSocket, hashPublicKey(socketPublicKey));
+    }
+  });
+  socket.on("message", async (message) => {
+    const { type, payload }: ClientLibToServer | RelayMessage =
+      JSON.parse(message);
+    if (type === "relay") {
+      (get(publicKeyToSocket, hashPublicKey(payload.to)) || []).forEach(
+        sendMessageToClient({ type: "message", payload }),
       );
-      redisAddToSet(
-        hashPublicKey(publicKey),
-        hashPublicKey(serverKey.publicKey),
+    }
+    if (type === "id") {
+      if (socketPublicKey) return; // A socket will serve only one publicKey until its death.
+      const { publicKey, certificate } = payload;
+      console.log("identifying client");
+      if (await verify(publicKey, certificate, challenge)) {
+        setSocketPublicKey(publicKey);
+        sendMessageToClient({ type: "validated" })(socket);
+      } else {
+        sendMessageToClient({ type: "bad-auth" })(socket);
+      }
+    }
+    if (type === "message") {
+      if (!socketPublicKey) return; // Unauthenticated sockets are not to be used.
+      const { to } = payload;
+      if (!canSendMessage(socketPublicKey, to)) {
+        return;
+      }
+      console.log(
+        `got message from ${logPubKey(socketPublicKey)} to ${logPubKey(to)}`,
       );
-    };
-    const challenge = randomString(10);
-    sendMessageToClient({ type: "challenge", payload: { challenge } })(socket);
-    socket.on("close", () => {
-      if (!socketPublicKey) return;
-      const arr = get(publicKeyToSocket, hashPublicKey(socketPublicKey));
-      if (arr) {
-        removeAllFromArray(arr, socket);
-      }
-      if (!arr.length) {
-        remove(publicKeyToSocket, hashPublicKey(socketPublicKey));
-      }
-      redisRemoveFromSet(
-        hashPublicKey(socketPublicKey),
-        hashPublicKey(serverKey.publicKey),
-      );
-      if (
-        (
-          get(
-            publicKeyToSocket,
-            hashPublicKey(socketPublicKey),
-          ) as Array<WebSocketClient>
-        ).includes(socket)
-      ) {
-        socket.close(1000);
-        remove(publicKeyToSocket, hashPublicKey(socketPublicKey));
-      }
-    });
-    socket.on("message", async (message) => {
-      const { type, payload }: ClientLibToServer | RelayMessage =
-        JSON.parse(message);
-      if (type === "relay") {
-        (get(publicKeyToSocket, hashPublicKey(payload.to)) || []).forEach(
-          sendMessageToClient({ type: "message", payload }),
-        );
-      }
-      if (type === "id") {
-        if (socketPublicKey) return; // A socket will serve only one publicKey until its death.
-        const { publicKey, certificate } = payload;
-        console.log("identifying client");
-        if (await verify(publicKey, certificate, challenge)) {
-          setSocketPublicKey(publicKey);
-          sendMessageToClient({ type: "validated" })(socket);
-        } else {
-          sendMessageToClient({ type: "bad-auth" })(socket);
-        }
-      }
-      if (type === "message") {
-        if (!socketPublicKey) return; // Unauthenticated sockets are not to be used.
-        const { to } = payload;
-        if (!canSendMessage(socketPublicKey, to)) {
-          return;
-        }
-        console.log(
-          `got message from ${logPubKey(socketPublicKey)} to ${logPubKey(to)}`,
-        );
-        recordForRateLimitingAndBilling(socketPublicKey, to);
-        forwardMessage(serverKey, to, payload);
-      }
-    });
+      recordForRateLimitingAndBilling(socketPublicKey, to);
+      forwardMessage(serverKey, to, payload);
+    }
   });
 };
-start();
+
+const start = (serverKey: KeyPair) => {
+  new WebSocketServer(parseInt(Deno.env.get(portEnvPAram) || "3000")).on(
+    "connection",
+    onClientConnect(serverKey),
+  );
+};
+
+genKeyPair().then(start);
