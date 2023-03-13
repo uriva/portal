@@ -1,206 +1,81 @@
-import { Md5 } from "https://deno.land/std@0.119.0/hash/md5.ts";
+import * as secp256k1 from "npm:@noble/secp256k1";
+
+import { base64 } from "npm:@scure/base";
 import { cryptoRandomString } from "https://deno.land/x/crypto_random_string@1.0.0/mod.ts";
-import { sideLog } from "./utils.ts";
+import { randomBytes } from "npm:@noble/hashes/utils";
+import { sha256 } from "npm:@noble/hashes/sha256";
 
-export type PrivateKey = { signing: JsonWebKey; encryption: JsonWebKey };
-export type PublicKey = { signing: JsonWebKey; encryption: JsonWebKey };
-export type EncryptedShortString = string;
-export type EncryptedBigData = {
-  encrypted: number[];
-  iv: number[];
-};
-export type Signature = string;
-export type RandomString = string;
-export interface KeyPair {
-  publicKey: PublicKey;
-  privateKey: PrivateKey;
-}
+secp256k1.utils.sha256Sync = (...msgs) =>
+  sha256(secp256k1.utils.concatBytes(...msgs));
 
-const signAlgo = {
-  name: "RSASSA-PKCS1-v1_5",
-  modulusLength: 2048,
-  publicExponent: new Uint8Array([0x01, 0x00, 0x01]),
-  hash: "SHA-256",
-};
-const encryptAlgo = {
-  name: "RSA-OAEP",
-  modulusLength: 4096,
-  publicExponent: new Uint8Array([0x01, 0x00, 0x01]),
-  hash: "SHA-256",
-};
+export type PrivateKey = ReturnType<typeof generatePrivateKey>;
+export type PublicKey = ReturnType<typeof getPublicKey>;
+export type Signature = ReturnType<typeof sign>;
 
-const format = "jwk";
+export const generatePrivateKey = (): string =>
+  secp256k1.utils.bytesToHex(secp256k1.utils.randomPrivateKey());
 
-const stringEncode = (str: string): ArrayBuffer =>
-  new TextEncoder().encode(str).buffer;
+export const getPublicKey = (privateKey: string): string =>
+  secp256k1.utils.bytesToHex(secp256k1.schnorr.getPublicKey(privateKey));
 
-const stringDecode = (arr: ArrayBuffer): string =>
-  new TextDecoder().decode(arr);
-
-const stringFromArrayBuffer = (buf: ArrayBuffer): string =>
-  Array.from(new Uint8Array(buf))
-    .map((n) => String.fromCharCode(n))
-    .join("");
-
-const arrayBufferFromString = (str: string): ArrayBuffer =>
-  new Uint8Array(Array.from(str).map((c) => c.charCodeAt(0)));
-
-const exportJWK = (key: CryptoKey) => crypto.subtle.exportKey(format, key);
-
-const exportKeyPair = ({ privateKey, publicKey }: CryptoKeyPair) =>
-  Promise.all([exportJWK(privateKey), exportJWK(publicKey)]);
-
-export const genKeyPair = () =>
-  Promise.all([
-    crypto.subtle
-      .generateKey(signAlgo, true, ["sign", "verify"])
-      .then(exportKeyPair),
-    crypto.subtle
-      .generateKey(encryptAlgo, true, ["encrypt", "decrypt"])
-      .then(exportKeyPair),
-  ]).then(([[privateSign, publicSign], [privateEncrypt, publicEncrypt]]) => ({
-    privateKey: { signing: privateSign, encryption: privateEncrypt },
-    publicKey: { signing: publicSign, encryption: publicEncrypt },
-  }));
-
-export const encrypt = async (
-  data: string,
-  { encryption }: PublicKey,
-): Promise<EncryptedShortString> => {
-  if (data.length > maxMessageLength) throw "string is too long to encrypt";
-  return crypto.subtle
-    .encrypt(
-      encryptAlgo,
-      await crypto.subtle.importKey(format, encryption, encryptAlgo, true, [
-        "encrypt",
-      ]),
-      stringEncode(data),
-    )
-    .then(stringFromArrayBuffer);
-};
-
-export const decrypt = async (
-  data: EncryptedShortString,
-  { encryption }: PrivateKey,
-) =>
-  crypto.subtle
-    .decrypt(
-      encryptAlgo,
-      await crypto.subtle.importKey(format, encryption, encryptAlgo, true, [
-        "decrypt",
-      ]),
-      arrayBufferFromString(data),
-    )
-    .then(stringDecode);
-
-export const verify = async (
-  { signing }: PublicKey,
+export const verify = (
+  publicKey: PublicKey,
   signature: Signature,
   data: string,
-) =>
-  crypto.subtle.verify(
-    signAlgo,
-    await crypto.subtle.importKey(format, signing, signAlgo, false, ["verify"]),
-    arrayBufferFromString(signature),
-    stringEncode(data),
+) => secp256k1.schnorr.verifySync(signature, sha256(data), publicKey);
+
+export const sign = (privateKey: PrivateKey, data: string) =>
+  secp256k1.utils.bytesToHex(
+    secp256k1.schnorr.signSync(sha256(data), privateKey),
   );
 
-export const sign = async ({ signing }: PrivateKey, data: string) =>
-  crypto.subtle
-    .sign(
-      signAlgo,
-      await crypto.subtle.importKey(format, signing, signAlgo, false, ["sign"]),
-      stringEncode(data),
-    )
-    .then(stringFromArrayBuffer);
-
-export const maxMessageLength = 446;
+export type RandomString = string;
 
 export const randomString = (length: number): RandomString =>
   cryptoRandomString({ length });
 
-type StrObject = { [index: string]: string };
-const sortObjKeys = (x: StrObject) =>
-  Object.keys(x)
-    .sort()
-    .reduce((acc: { [index: string]: string }, key) => {
-      acc[key] = x[key];
-      return acc;
-    }, {});
-
-const hashJWK = (x: JsonWebKey) =>
-  new Md5().update(JSON.stringify(sortObjKeys(x as StrObject))).toString();
-
-export const hashPublicKey = ({ encryption, signing }: PublicKey) =>
-  hashJWK(encryption) + hashJWK(signing);
-
-export const comparePublicKeys = (p1: PublicKey, p2: PublicKey) =>
-  hashPublicKey(p1) === hashPublicKey(p2);
-
-const createSymmetricKey = () =>
-  crypto.subtle.generateKey({ name: "AES-CBC", length: 128 }, true, [
-    "encrypt",
-    "decrypt",
-  ]);
-
-const encryptSymmetric = async (
-  key: CryptoKey,
-  data: string,
-): Promise<EncryptedBigData> => {
-  const iv = window.crypto.getRandomValues(new Uint8Array(128 / 8));
-  return {
-    iv: Array.from(iv),
-    encrypted: Array.from(
-      new Uint8Array(
-        await window.crypto.subtle.encrypt(
-          { name: "AES-CBC", iv },
-          key,
-          stringEncode(data),
+const getNormalizedX = (key: Uint8Array): Uint8Array => key.slice(1, 33);
+export type EncryptedString = string;
+export const encrypt = async (
+  privKey: PrivateKey,
+  pubKey: PublicKey,
+  text: string,
+): Promise<EncryptedString> => {
+  const iv = Uint8Array.from(randomBytes(16));
+  return `${base64.encode(
+    new Uint8Array(
+      await crypto.subtle.encrypt(
+        { name: "AES-CBC", iv },
+        await crypto.subtle.importKey(
+          "raw",
+          getNormalizedX(secp256k1.getSharedSecret(privKey, "02" + pubKey)),
+          { name: "AES-CBC" },
+          false,
+          ["encrypt"],
         ),
+        new TextEncoder().encode(text),
       ),
     ),
-  };
+  )}?iv=${base64.encode(new Uint8Array(iv.buffer))}`;
 };
 
-const symmetricAlgo = { name: "AES-CBC" };
-
-export const decryptLongString = async (
-  privateKey: PrivateKey,
-  { symmetricKey, data: { encrypted, iv } }: EncryptedStringWithSymmetricKey,
-) =>
-  new TextDecoder().decode(
-    await window.crypto.subtle.decrypt(
-      { ...symmetricAlgo, iv: new Uint8Array(iv) },
+export const decrypt = async (
+  privKey: PrivateKey,
+  pubKey: PublicKey,
+  data: string,
+): Promise<string> => {
+  const [ctb64, ivb64] = data.split("?iv=");
+  return new TextDecoder().decode(
+    await crypto.subtle.decrypt(
+      { name: "AES-CBC", iv: base64.decode(ivb64) },
       await crypto.subtle.importKey(
-        format,
-        JSON.parse(await decrypt(symmetricKey, privateKey)),
-        symmetricAlgo,
+        "raw",
+        getNormalizedX(secp256k1.getSharedSecret(privKey, "02" + pubKey)),
+        { name: "AES-CBC" },
         false,
-        ["encrypt", "decrypt"],
+        ["decrypt"],
       ),
-      new Uint8Array(encrypted),
+      base64.decode(ctb64),
     ),
   );
-
-export type EncryptedStringWithSymmetricKey = {
-  data: EncryptedBigData;
-  symmetricKey: EncryptedShortString;
 };
-
-export const encryptLongString = async (
-  publicKey: PublicKey,
-  dataToEncrypt: string,
-): Promise<EncryptedStringWithSymmetricKey> => {
-  const symmetricKeyUnencrypted = await createSymmetricKey();
-  const [data, symmetricKey] = await Promise.all([
-    encryptSymmetric(symmetricKeyUnencrypted, dataToEncrypt),
-    encrypt(
-      JSON.stringify(await exportJWK(symmetricKeyUnencrypted)),
-      publicKey,
-    ),
-  ]);
-  return { data, symmetricKey };
-};
-
-export const pubKeyShortStr = ({ encryption }: PublicKey) =>
-  encryption.n && encryption.n.slice(0, 10);

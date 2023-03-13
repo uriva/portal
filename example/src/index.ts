@@ -1,38 +1,36 @@
-import { connect, genKeyPair } from "../../client/src/index.ts";
+import { connect, generatePrivateKey } from "../../client/src/index.ts";
 
-import { pubKeyShortStr } from "../../common/src/crypto.ts";
+import { getPublicKey } from "../../common/src/crypto.ts";
 
 // Imagine each of these segments happen on a different machine, with
 // arbitrary networking setup.
 // All Alice and Bob need to do to communicate is have the other party's public key
 // (a small serializable json).
-const alice = await genKeyPair();
-const bob = await genKeyPair();
+const alice = await generatePrivateKey();
+const bob = await generatePrivateKey();
 
 Promise.all([
   connect({
-    publicKey: alice.publicKey,
-    privateKey: alice.privateKey,
+    privateKey: alice,
     onMessage: ({ from, payload }) =>
-      Promise.resolve(console.log(`bob (${pubKeyShortStr(from)}) says`, payload)),
+      Promise.resolve(console.log(`bob (${from}) says`, payload)),
     onClose: () => {},
   }),
   connect({
-    publicKey: bob.publicKey,
-    privateKey: bob.privateKey,
+    privateKey: bob,
     onMessage: ({ from, payload }) =>
-      Promise.resolve(console.log(`alice (${pubKeyShortStr(from)}) says`, payload)),
+      Promise.resolve(console.log(`alice (${from}) says`, payload)),
     onClose: () => {},
   }),
 ]).then(([aliceSendMessage, bobSendMessage]) => {
   aliceSendMessage({
-    to: bob.publicKey,
+    to: getPublicKey(bob),
     payload: { text: "hello Bob! I've sent you this small json" },
   }).then(() => {
     console.log("Bob has acked!");
   });
   bobSendMessage({
-    to: alice.publicKey,
+    to: getPublicKey(alice),
     payload: "hello alice here's a string message",
   }).then(() => {
     console.log("Alice has acked!");

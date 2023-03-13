@@ -1,8 +1,7 @@
 import {
-  KeyPair,
-  comparePublicKeys,
-  genKeyPair,
-  pubKeyShortStr,
+  PrivateKey,
+  generatePrivateKey,
+  getPublicKey,
 } from "../../common/src/crypto.ts";
 import {
   WebSocketClient,
@@ -19,7 +18,7 @@ import {
 } from "../../common/src/utils.ts";
 import { crypto, types } from "../../common/src/index.ts";
 
-const { randomString, verify, hashPublicKey } = crypto;
+const { randomString, verify } = crypto;
 
 type ClientLibToServer = types.ClientLibToServer;
 type NotValidatedMessage = types.NotValidatedMessage;
@@ -89,8 +88,8 @@ const canSendMessage = (sender: PublicKey, receiver: PublicKey) => {
 const resolvePeerHubSockets =
   (myPublicKey: PublicKey) => (publicKey: PublicKey) =>
     Promise.all(
-      redisGetFromSetOrEmptyArray(hashPublicKey(publicKey)).map(async (id) => {
-        if (comparePublicKeys(id, myPublicKey)) {
+      redisGetFromSetOrEmptyArray(publicKey).map(async (id) => {
+        if (id === myPublicKey) {
           return null;
         }
         if (has(publicKeyToSocket, id)) {
@@ -110,14 +109,14 @@ const sendMessageToClient =
 const portEnvPAram = "port";
 
 const forwardMessage = async (
-  serverKey: KeyPair,
+  serverKey: PrivateKey,
   to: PublicKey,
   payload: RegularMessagePayload,
 ) => {
-  getOrDefault([], publicKeyToSocket, hashPublicKey(to)).forEach(
+  getOrDefault([], publicKeyToSocket, to).forEach(
     sendMessageToClient({ type: "message", payload }),
   );
-  (await resolvePeerHubSockets(serverKey.publicKey)(to)).map(
+  (await resolvePeerHubSockets(getPublicKey(serverKey))(to)).map(
     (sockets) =>
       sockets &&
       sockets.forEach(sendMessageToClient({ type: "relay", payload })),
@@ -127,16 +126,16 @@ const forwardMessage = async (
 const onClientMessage =
   (
     socket: WebSocketClient,
-    serverKey: KeyPair,
+    serverKey: PrivateKey,
     challenge: string,
     socketIdentity: () => PublicKey | null,
     setSocketIdentity: (pk: PublicKey) => void,
   ) =>
-  async (message: string) => {
+  (message: string) => {
     const { type, payload }: ClientLibToServer | RelayMessage =
       JSON.parse(message);
     if (type === "relay") {
-      (get(publicKeyToSocket, hashPublicKey(payload.to)) || []).forEach(
+      (get(publicKeyToSocket, payload.to) || []).forEach(
         sendMessageToClient({ type: "message", payload }),
       );
     }
@@ -144,10 +143,12 @@ const onClientMessage =
       if (socketIdentity()) return; // A socket will serve only one publicKey until its death.
       const { publicKey, certificate } = payload;
       console.log("identifying client");
-      if (await verify(publicKey, certificate, challenge)) {
+      if (verify(publicKey, certificate, challenge)) {
+        console.log("good challenge response");
         setSocketIdentity(publicKey);
         sendMessageToClient({ type: "validated" })(socket);
       } else {
+        console.log("bad challenge response");
         sendMessageToClient({ type: "bad-auth" })(socket);
       }
     }
@@ -156,75 +157,62 @@ const onClientMessage =
       if (!socketId) return; // Unauthenticated sockets are not to be used.
       const { to } = payload;
       if (!canSendMessage(socketId, to)) return;
-      console.log(
-        `got message from ${pubKeyShortStr(socketId)} to ${pubKeyShortStr(to)}`,
-      );
+      console.log(`got message from ${socketId} to ${to}`);
       recordForRateLimitingAndBilling(socketId, to);
       forwardMessage(serverKey, to, payload);
     }
   };
 
 // Incoming connections might be from a client or another hub.
-const onClientConnect = (serverKey: KeyPair) => (socket: WebSocketClient) => {
-  let socketPublicKey: null | PublicKey = null;
-  const challenge = randomString(10);
-  sendMessageToClient({ type: "challenge", payload: { challenge } })(socket);
-  socket.on("close", () => {
-    if (!socketPublicKey) return;
-    const arr = get(publicKeyToSocket, hashPublicKey(socketPublicKey));
-    if (arr) {
-      removeAllFromArray(arr, socket);
-    }
-    if (!arr.length) {
-      remove(publicKeyToSocket, hashPublicKey(socketPublicKey));
-    }
-    redisRemoveFromSet(
-      hashPublicKey(socketPublicKey),
-      hashPublicKey(serverKey.publicKey),
+const onClientConnect =
+  (serverKey: PrivateKey) => (socket: WebSocketClient) => {
+    let socketPublicKey: null | PublicKey = null;
+    const challenge = randomString(10);
+    sendMessageToClient({ type: "challenge", payload: { challenge } })(socket);
+    socket.on("close", () => {
+      if (!socketPublicKey) return;
+      const arr = get(publicKeyToSocket, socketPublicKey);
+      if (arr) {
+        removeAllFromArray(arr, socket);
+      }
+      if (!arr.length) {
+        remove(publicKeyToSocket, socketPublicKey);
+      }
+      redisRemoveFromSet(socketPublicKey, getPublicKey(serverKey));
+      if (
+        (
+          get(publicKeyToSocket, socketPublicKey) as Array<WebSocketClient>
+        ).includes(socket)
+      ) {
+        socket.close(1000);
+        remove(publicKeyToSocket, socketPublicKey);
+      }
+    });
+    socket.on(
+      "message",
+      onClientMessage(
+        socket,
+        serverKey,
+        challenge,
+        () => socketPublicKey,
+        (publicKey: PublicKey) => {
+          socketPublicKey = publicKey;
+          set(
+            publicKeyToSocket,
+            publicKey,
+            conj(getOrDefault([], publicKeyToSocket, publicKey), socket),
+          );
+          redisAddToSet(publicKey, getPublicKey(serverKey));
+        },
+      ),
     );
-    if (
-      (
-        get(
-          publicKeyToSocket,
-          hashPublicKey(socketPublicKey),
-        ) as Array<WebSocketClient>
-      ).includes(socket)
-    ) {
-      socket.close(1000);
-      remove(publicKeyToSocket, hashPublicKey(socketPublicKey));
-    }
-  });
-  socket.on(
-    "message",
-    onClientMessage(
-      socket,
-      serverKey,
-      challenge,
-      () => socketPublicKey,
-      (publicKey: PublicKey) => {
-        socketPublicKey = publicKey;
-        set(
-          publicKeyToSocket,
-          hashPublicKey(publicKey),
-          conj(
-            getOrDefault([], publicKeyToSocket, hashPublicKey(publicKey)),
-            socket,
-          ),
-        );
-        redisAddToSet(
-          hashPublicKey(publicKey),
-          hashPublicKey(serverKey.publicKey),
-        );
-      },
-    ),
-  );
-};
+  };
 
-const start = (serverKey: KeyPair) => {
+const start = (serverKey: PrivateKey) => {
   new WebSocketServer(parseInt(Deno.env.get(portEnvPAram) || "3000")).on(
     "connection",
     onClientConnect(serverKey),
   );
 };
 
-genKeyPair().then(start);
+start(generatePrivateKey());

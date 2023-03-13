@@ -4,42 +4,35 @@ import {
 } from "https://deno.land/std@0.174.0/testing/asserts.ts";
 import {
   decrypt,
-  decryptLongString,
   encrypt,
-  encryptLongString,
-  genKeyPair,
-  hashPublicKey,
-  maxMessageLength,
+  generatePrivateKey,
+  getPublicKey,
   randomString,
   sign,
   verify,
 } from "./crypto.ts";
 
 Deno.test("encrypt and decrypt", async () => {
-  const { privateKey, publicKey } = await genKeyPair();
-  const data = randomString(maxMessageLength);
-  assertEquals(await decrypt(await encrypt(data, publicKey), privateKey), data);
-});
-
-Deno.test("encrypt long string and decrypt", async () => {
-  const { privateKey, publicKey } = await genKeyPair();
-  const longString = randomString(maxMessageLength * 100);
+  const sender = generatePrivateKey();
+  const recipient = generatePrivateKey();
+  const data = randomString(1000);
   assertEquals(
-    await decryptLongString(
-      privateKey,
-      await encryptLongString(publicKey, longString),
+    await decrypt(
+      recipient,
+      getPublicKey(sender),
+      await encrypt(sender, getPublicKey(recipient), data),
     ),
-    longString,
+    data,
   );
 });
 
-Deno.test("sign and verify", async () => {
-  const { publicKey, privateKey } = await genKeyPair();
-  const data = randomString(maxMessageLength);
-  const signature = await sign(privateKey, data);
-  assertEquals(await verify(publicKey, signature, data), true);
+Deno.test("sign and verify", () => {
+  const privateKey = generatePrivateKey();
+  const data = randomString(1000);
+  const signature = sign(privateKey, data);
+  assertEquals(verify(getPublicKey(privateKey), signature, data), true);
   assertEquals(
-    await verify((await genKeyPair()).publicKey, signature, data),
+    verify(getPublicKey(generatePrivateKey()), signature, data),
     false,
   );
 });
@@ -48,10 +41,4 @@ Deno.test("generate a random string", () => {
   assertEquals(typeof randomString(10), "string");
   assertNotEquals(randomString(10), randomString(10));
   assertEquals(randomString(10).length, 10);
-});
-
-Deno.test("hash public keys", async () => {
-  const [k1, k2] = await Promise.all([genKeyPair(), genKeyPair()]);
-  assertEquals(hashPublicKey(k1.publicKey), hashPublicKey(k1.publicKey));
-  assertNotEquals(hashPublicKey(k1.publicKey), hashPublicKey(k2.publicKey));
 });

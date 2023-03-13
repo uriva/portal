@@ -14,14 +14,12 @@ type AckProtocolPayload =
 type AckProtocol = { to: crypto.PublicKey; payload: AckProtocolPayload };
 
 export interface ConnectWithAckingOptions {
-  publicKey: crypto.PublicKey;
   privateKey: crypto.PrivateKey;
   onMessage: (message: types.UnderEncryption) => Promise<void>;
   onClose: () => void;
 }
 
 export const connectWithAcking = async ({
-  publicKey,
   privateKey,
   onMessage,
   onClose,
@@ -30,14 +28,13 @@ export const connectWithAcking = async ({
 > => {
   const acks = new Map<string, () => void>();
   const send: (msg: AckProtocol) => void = await connect({
-    publicKey,
     privateKey,
     onMessage: (message: types.UnderEncryption) => {
       const { type, payload }: AckProtocolPayload = message.payload;
       if (type === "ack") {
         const callback = acks.get(payload.id);
         if (!callback) {
-          console.error("missing entry for ack");
+          console.error(`missing entry for ack ${payload.id}`, acks);
           return;
         }
         callback();
@@ -56,12 +53,9 @@ export const connectWithAcking = async ({
   });
   return ({ to, payload }: ClientToExterior) =>
     new Promise((resolve) => {
-      const msgId = crypto.randomString(10);
-      console.log("created message id", msgId);
-      acks.set(msgId, resolve);
-      send({
-        to,
-        payload: { type: "message", payload: { id: msgId, payload } },
-      });
+      const id = crypto.randomString(10);
+      console.log("created message id", id);
+      acks.set(id, resolve);
+      send({ to, payload: { type: "message", payload: { id, payload } } });
     });
 };

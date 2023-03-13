@@ -1,7 +1,8 @@
 import { crypto, types } from "../../common/src/index.ts";
 import {
-  decryptLongString,
-  encryptLongString,
+  decrypt,
+  encrypt,
+  getPublicKey,
   sign,
   verify,
 } from "../../common/src/crypto.ts";
@@ -18,7 +19,6 @@ type PublicKey = crypto.PublicKey;
 type PrivateKey = crypto.PrivateKey;
 
 export interface ConnectOptions {
-  publicKey: PublicKey;
   privateKey: PrivateKey;
   onMessage: (message: types.UnderEncryption) => void;
   onClose: () => void;
@@ -30,29 +30,28 @@ interface ClientToLib {
 }
 
 const signableString = (encryptedPayload: string, to: PublicKey) =>
-  JSON.stringify({ payload: encryptedPayload, to });
+  encryptedPayload + to;
 
 const signEncryptedMessage =
   (privateKey: PrivateKey, to: PublicKey) =>
-  (encryptedStr: string): Promise<ServerRegularMessage> =>
-    sign(privateKey, signableString(encryptedStr, to)).then((certificate) => ({
-      type: "message",
-      payload: {
-        to,
-        payload: encryptedStr,
-        certificate,
-      },
-    }));
+  (encryptedStr: string): ServerRegularMessage => ({
+    type: "message",
+    payload: {
+      to,
+      from: getPublicKey(privateKey),
+      payload: encryptedStr,
+      certificate: sign(privateKey, signableString(encryptedStr, to)),
+    },
+  });
 
 const encryptAndSign =
   (publicKey: PublicKey, privateKey: PrivateKey) =>
   ({ payload, to }: ClientToLib): Promise<ServerRegularMessage> =>
-    encryptLongString(publicKey, JSON.stringify({ from: publicKey, payload }))
+    encrypt(privateKey, publicKey, JSON.stringify({ from: publicKey, payload }))
       .then(JSON.stringify)
       .then(signEncryptedMessage(privateKey, to));
 
 export const connect = ({
-  publicKey,
   privateKey,
   onMessage,
   onClose,
@@ -70,30 +69,33 @@ export const connect = ({
     socket.on("message", async ({ data }) => {
       const message: ServerMessage = JSON.parse(data.toString());
       if (message.type === "validated") {
+        console.log("socket validated");
         resolve((x) =>
-          encryptAndSign(publicKey, privateKey)(x).then(sendThroughSocket),
+          encryptAndSign(x.to, privateKey)(x).then(sendThroughSocket),
         );
       }
       if (message.type === "challenge") {
+        console.log("got challenge");
         const { challenge } = message.payload;
         sendThroughSocket({
           type: "id",
           payload: {
-            publicKey,
-            certificate: await sign(privateKey, challenge),
+            publicKey: getPublicKey(privateKey),
+            certificate: sign(privateKey, challenge),
           },
         });
       }
       if (message.type === "message") {
-        const { payload, certificate } = message.payload;
+        const { payload, certificate, from } = message.payload;
+        // todo: `underEncryption.from` is unused
         const underEncryption: types.UnderEncryption = JSON.parse(
-          await decryptLongString(privateKey, JSON.parse(payload)),
+          await decrypt(privateKey, from, JSON.parse(payload)),
         );
         if (
-          await verify(
-            underEncryption.from,
+          verify(
+            from,
             certificate,
-            signableString(payload, publicKey),
+            signableString(payload, getPublicKey(privateKey)),
           )
         )
           onMessage(underEncryption);
