@@ -31,11 +31,6 @@ export interface NotValidatedMessage {
 // deno-lint-ignore no-explicit-any
 export type ClientMessage = any;
 
-export interface UnderEncryption {
-  from: PublicKey;
-  payload: ClientMessage;
-}
-
 export interface RegularMessagePayload {
   certificate: Signature;
   to: PublicKey;

@@ -1,5 +1,6 @@
-import { crypto, types } from "../../common/src/index.ts";
 import {
+  PrivateKey,
+  PublicKey,
   decrypt,
   encrypt,
   getPublicKey,
@@ -9,23 +10,22 @@ import {
 
 import { ServerRegularMessage } from "../../common/src/types.ts";
 import { StandardWebSocketClient } from "https://deno.land/x/websocket@v0.1.4/mod.ts";
+import { types } from "../../common/src/index.ts";
 
-type ServerMessage = types.ServerMessage;
-type ClientMessage = types.ClientMessage;
-type ClientLibToServer = types.ClientLibToServer;
-
-type PublicKey = crypto.PublicKey;
-type PrivateKey = crypto.PrivateKey;
+export interface IncomingMessage {
+  from: PublicKey;
+  payload: types.ClientMessage;
+}
 
 export interface ConnectOptions {
   privateKey: PrivateKey;
-  onMessage: (message: types.UnderEncryption) => void;
+  onMessage: (message: IncomingMessage) => void;
   onClose: () => void;
 }
 
 interface ClientToLib {
   to: PublicKey;
-  payload: ClientMessage;
+  payload: types.ClientMessage;
 }
 
 const signableString = (encryptedPayload: string, to: PublicKey) =>
@@ -59,14 +59,14 @@ export const connect = ({
     const socket = new StandardWebSocketClient(
       Deno.env.get("url") || "ws://localhost:3000",
     );
-    const sendThroughSocket = (x: ClientLibToServer) =>
+    const sendThroughSocket = (x: types.ClientLibToServer) =>
       socket.send(JSON.stringify(x));
     socket.on("open", () => {
       console.debug("socket opened");
     });
     socket.on("close", onClose);
     socket.on("message", async ({ data }) => {
-      const message: ServerMessage = JSON.parse(data.toString());
+      const message: types.ServerMessage = JSON.parse(data.toString());
       if (message.type === "validated") {
         console.debug("socket validated");
         resolve((x) =>
@@ -86,18 +86,22 @@ export const connect = ({
       }
       if (message.type === "message") {
         const { payload, certificate, from } = message.payload;
-        const underEncryption: types.UnderEncryption = JSON.parse(
-          await decrypt(privateKey, from, JSON.parse(payload)),
-        );
         if (
-          verify(
+          !verify(
             from,
             certificate,
             signableString(payload, getPublicKey(privateKey)),
           )
-        )
-          onMessage({ payload: underEncryption, from });
-        else console.error("ignoring a message with bad certificate");
+        ) {
+          console.error("ignoring a message with bad certificate");
+          return;
+        }
+        onMessage({
+          payload: JSON.parse(
+            await decrypt(privateKey, from, JSON.parse(payload)),
+          ),
+          from,
+        });
       }
     });
   });

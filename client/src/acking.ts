@@ -1,6 +1,5 @@
+import { IncomingMessage, connect } from "./connect.ts";
 import { crypto, types } from "../../common/src/index.ts";
-
-import { connect } from "./connect.ts";
 
 type ClientToExterior = { to: crypto.PublicKey; payload: types.ClientMessage };
 
@@ -15,7 +14,7 @@ type AckProtocol = { to: crypto.PublicKey; payload: AckProtocolPayload };
 
 export interface ConnectWithAckingOptions {
   privateKey: crypto.PrivateKey;
-  onMessage: (message: types.UnderEncryption) => Promise<void>;
+  onMessage: (message: IncomingMessage) => Promise<void>;
   onClose: () => void;
 }
 
@@ -29,7 +28,7 @@ export const connectWithAcking = async ({
   const acks = new Map<string, () => void>();
   const send: (msg: AckProtocol) => void = await connect({
     privateKey,
-    onMessage: (message: types.UnderEncryption) => {
+    onMessage: (message: IncomingMessage) => {
       const { type, payload }: AckProtocolPayload = message.payload;
       if (type === "ack") {
         const callback = acks.get(payload.id);
