@@ -6,6 +6,7 @@ import {
   verify,
 } from "../../common/src/crypto.ts";
 
+import { ServerRegularMessage } from "../../common/src/types.ts";
 import { StandardWebSocketClient } from "https://deno.land/x/websocket@v0.1.4/mod.ts";
 
 type ServerMessage = types.ServerMessage;
@@ -30,6 +31,25 @@ interface ClientToLib {
 const signableString = (encryptedPayload: string, to: PublicKey) =>
   JSON.stringify({ payload: encryptedPayload, to });
 
+const signEncryptedMessage =
+  (privateKey: PrivateKey, to: PublicKey) =>
+  (encryptedStr: string): Promise<ServerRegularMessage> =>
+    sign(privateKey, signableString(encryptedStr, to)).then((certificate) => ({
+      type: "message",
+      payload: {
+        to,
+        payload: encryptedStr,
+        certificate,
+      },
+    }));
+
+const encryptAndSign =
+  (publicKey: PublicKey, privateKey: PrivateKey) =>
+  ({ payload, to }: ClientToLib): Promise<ServerRegularMessage> =>
+    encryptLongString(publicKey, JSON.stringify({ from: publicKey, payload }))
+      .then(JSON.stringify)
+      .then(signEncryptedMessage(privateKey, to));
+
 export const connect = ({
   publicKey,
   privateKey,
@@ -49,26 +69,9 @@ export const connect = ({
     socket.on("message", async ({ data }) => {
       const message: ServerMessage = JSON.parse(data.toString());
       if (message.type === "validated") {
-        resolve(async ({ payload, to }: ClientToLib) => {
-          const encrypted = JSON.stringify(
-            await encryptLongString(
-              publicKey,
-              JSON.stringify({ from: publicKey, payload }),
-            ),
-          );
-          const certificate = await sign(
-            privateKey,
-            signableString(encrypted, to),
-          );
-          sendThroughSocket({
-            type: "message",
-            payload: {
-              to,
-              payload: encrypted,
-              certificate,
-            },
-          });
-        });
+        resolve((x) =>
+          encryptAndSign(publicKey, privateKey)(x).then(sendThroughSocket),
+        );
       }
       if (message.type === "challenge") {
         const { challenge } = message.payload;
