@@ -9,7 +9,6 @@ import {
 
 import { ServerRegularMessage } from "../../common/src/types.ts";
 import { StandardWebSocketClient } from "https://deno.land/x/websocket@v0.1.4/mod.ts";
-import { sideLog } from "../../common/src/utils.ts";
 
 type ServerMessage = types.ServerMessage;
 type ClientMessage = types.ClientMessage;
@@ -47,11 +46,7 @@ const signEncryptedMessage =
 const encryptAndSign =
   (publicKey: PublicKey, privateKey: PrivateKey) =>
   ({ payload, to }: ClientToLib): Promise<ServerRegularMessage> =>
-    encrypt(
-      privateKey,
-      publicKey,
-      JSON.stringify({ from: getPublicKey(privateKey), payload }),
-    )
+    encrypt(privateKey, publicKey, JSON.stringify(payload))
       .then(JSON.stringify)
       .then(signEncryptedMessage(privateKey, to));
 
@@ -91,7 +86,6 @@ export const connect = ({
       }
       if (message.type === "message") {
         const { payload, certificate, from } = message.payload;
-        // todo: `underEncryption.from` is unused
         const underEncryption: types.UnderEncryption = JSON.parse(
           await decrypt(privateKey, from, JSON.parse(payload)),
         );
@@ -102,7 +96,7 @@ export const connect = ({
             signableString(payload, getPublicKey(privateKey)),
           )
         )
-          onMessage(underEncryption);
+          onMessage({ payload: underEncryption, from });
         else console.error("ignoring a message with bad certificate");
       }
     });
