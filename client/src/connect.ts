@@ -47,7 +47,11 @@ const signEncryptedMessage =
 const encryptAndSign =
   (publicKey: PublicKey, privateKey: PrivateKey) =>
   ({ payload, to }: ClientToLib): Promise<ServerRegularMessage> =>
-    encrypt(privateKey, publicKey, JSON.stringify({ from: publicKey, payload }))
+    encrypt(
+      privateKey,
+      publicKey,
+      JSON.stringify({ from: getPublicKey(privateKey), payload }),
+    )
       .then(JSON.stringify)
       .then(signEncryptedMessage(privateKey, to));
 
@@ -63,19 +67,19 @@ export const connect = ({
     const sendThroughSocket = (x: ClientLibToServer) =>
       socket.send(JSON.stringify(x));
     socket.on("open", () => {
-      console.log("socket opened");
+      console.debug("socket opened");
     });
     socket.on("close", onClose);
     socket.on("message", async ({ data }) => {
       const message: ServerMessage = JSON.parse(data.toString());
       if (message.type === "validated") {
-        console.log("socket validated");
+        console.debug("socket validated");
         resolve((x) =>
           encryptAndSign(x.to, privateKey)(x).then(sendThroughSocket),
         );
       }
       if (message.type === "challenge") {
-        console.log("got challenge");
+        console.debug("got challenge");
         const { challenge } = message.payload;
         sendThroughSocket({
           type: "id",

@@ -142,13 +142,10 @@ const onClientMessage =
     if (type === "id") {
       if (socketIdentity()) return; // A socket will serve only one publicKey until its death.
       const { publicKey, certificate } = payload;
-      console.log("identifying client");
       if (verify(publicKey, certificate, challenge)) {
-        console.log("good challenge response");
         setSocketIdentity(publicKey);
         sendMessageToClient({ type: "validated" })(socket);
       } else {
-        console.log("bad challenge response");
         sendMessageToClient({ type: "bad-auth" })(socket);
       }
     }
@@ -157,7 +154,6 @@ const onClientMessage =
       if (!socketId) return; // Unauthenticated sockets are not to be used.
       const { to } = payload;
       if (!canSendMessage(socketId, to)) return;
-      console.log(`got message from ${socketId} to ${to}`);
       recordForRateLimitingAndBilling(socketId, to);
       forwardMessage(serverKey, to, payload);
     }

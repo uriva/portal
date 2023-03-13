@@ -34,7 +34,7 @@ export const connectWithAcking = async ({
       if (type === "ack") {
         const callback = acks.get(payload.id);
         if (!callback) {
-          console.error(`missing entry for ack ${payload.id}`, acks);
+          console.error(`missing entry for ack ${payload.id}`);
           return;
         }
         callback();
@@ -54,7 +54,6 @@ export const connectWithAcking = async ({
   return ({ to, payload }: ClientToExterior) =>
     new Promise((resolve) => {
       const id = crypto.randomString(10);
-      console.log("created message id", id);
       acks.set(id, resolve);
       send({ to, payload: { type: "message", payload: { id, payload } } });
     });
