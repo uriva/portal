@@ -57,7 +57,7 @@ export const connect = ({
 }: ConnectOptions): Promise<(message: ClientToLib) => void> =>
   new Promise((resolve, reject) => {
     const socket = new StandardWebSocketClient(
-      Deno.env.get("url") || "ws://uriva-portal.deno.dev/",
+      Deno.env.get("url") || "wss://uriva-portal-mete6t9t7geg.deno.dev/",
     );
     const sendThroughSocket = (x: types.ClientLibToServer) =>
       socket.send(JSON.stringify(x));
