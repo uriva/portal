@@ -1,6 +1,8 @@
+# Portal
+
 `portal` is a service to abstract away networking configuration, and replace them with an in-language API that developers can use easily.
 
-# Quickstart
+## Quickstart
 
 `npm i message-portal`
 
@@ -41,7 +43,7 @@ Promise.all([generatePrivateKey(), generatePrivateKey()]).then(([alice, bob]) =>
 );
 ```
 
-# Motivation
+## Motivation
 
 Somehow it's still frustrating to send messasges between pieces of codes.
 
@@ -62,6 +64,6 @@ We can do better.
 
 Using `portal` you can worry about this later or not at all, and simply `npm install` in two locations, plug in a string you generate locally, and you get instant connectivity.
 
-# How does it work
+## How does it work
 
 Implementation is very simple - e2e encrypted messages are passed through a socket connecion to a third party server, running open source code.
