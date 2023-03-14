@@ -4,7 +4,7 @@
 
 # Example usage
 
-```
+```js
 const { connect, generatePrivateKey, getPublicKey } = require("message-portal");
 
 // Imagine each of these segments happen on a different machine, with
