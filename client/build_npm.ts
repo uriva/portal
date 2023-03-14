@@ -1,6 +1,6 @@
 import { build, emptyDir } from "https://deno.land/x/dnt/mod.ts";
 
-const outDir = "./npm";
+const outDir = "./dist";
 
 await emptyDir(outDir);
 
@@ -16,9 +16,9 @@ await build({
     crypto: true,
   },
   package: {
-    name: "portal",
+    name: "message-portal",
     version: Deno.args[0],
-    description: "Your package.",
+    description: "Move messages without environment configuration.",
     license: "MIT",
     repository: {
       type: "git",
