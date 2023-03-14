@@ -2,7 +2,7 @@ import * as base64 from "https://denopkg.com/chiefbiiko/base64@master/mod.ts";
 import * as secp256k1 from "https://deno.land/x/secp256k1/mod.ts";
 
 import { cryptoRandomString } from "https://deno.land/x/crypto_random_string@1.0.0/mod.ts";
-import { randomBytes } from "node:crypto";
+import randomBytes from "https://deno.land/std@0.84.0/node/_crypto/randomBytes.ts";
 import { sha256 } from "https://denopkg.com/chiefbiiko/sha256@v1.0.0/mod.ts";
 
 export type PrivateKey = ReturnType<typeof generatePrivateKey>;
