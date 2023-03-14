@@ -1,7 +1,7 @@
 import {
-  PrivateKey,
   generatePrivateKey,
   getPublicKey,
+  PrivateKey,
 } from "../../common/src/crypto.ts";
 import {
   WebSocketClient,
@@ -123,41 +123,41 @@ const forwardMessage = async (
   );
 };
 
-const onClientMessage =
-  (
-    socket: WebSocketClient,
-    serverKey: PrivateKey,
-    challenge: string,
-    socketIdentity: () => PublicKey | null,
-    setSocketIdentity: (pk: PublicKey) => void,
-  ) =>
-  (message: string) => {
-    const { type, payload }: ClientLibToServer | RelayMessage =
-      JSON.parse(message);
-    if (type === "relay") {
-      (get(publicKeyToSocket, payload.to) || []).forEach(
-        sendMessageToClient({ type: "message", payload }),
-      );
+const onClientMessage = (
+  socket: WebSocketClient,
+  serverKey: PrivateKey,
+  challenge: string,
+  socketIdentity: () => PublicKey | null,
+  setSocketIdentity: (pk: PublicKey) => void,
+) =>
+(message: string) => {
+  const { type, payload }: ClientLibToServer | RelayMessage = JSON.parse(
+    message,
+  );
+  if (type === "relay") {
+    (get(publicKeyToSocket, payload.to) || []).forEach(
+      sendMessageToClient({ type: "message", payload }),
+    );
+  }
+  if (type === "id") {
+    if (socketIdentity()) return; // A socket will serve only one publicKey until its death.
+    const { publicKey, certificate } = payload;
+    if (verify(publicKey, certificate, challenge)) {
+      setSocketIdentity(publicKey);
+      sendMessageToClient({ type: "validated" })(socket);
+    } else {
+      sendMessageToClient({ type: "bad-auth" })(socket);
     }
-    if (type === "id") {
-      if (socketIdentity()) return; // A socket will serve only one publicKey until its death.
-      const { publicKey, certificate } = payload;
-      if (verify(publicKey, certificate, challenge)) {
-        setSocketIdentity(publicKey);
-        sendMessageToClient({ type: "validated" })(socket);
-      } else {
-        sendMessageToClient({ type: "bad-auth" })(socket);
-      }
-    }
-    if (type === "message") {
-      const socketId = socketIdentity();
-      if (!socketId) return; // Unauthenticated sockets are not to be used.
-      const { to } = payload;
-      if (!canSendMessage(socketId, to)) return;
-      recordForRateLimitingAndBilling(socketId, to);
-      forwardMessage(serverKey, to, payload);
-    }
-  };
+  }
+  if (type === "message") {
+    const socketId = socketIdentity();
+    if (!socketId) return; // Unauthenticated sockets are not to be used.
+    const { to } = payload;
+    if (!canSendMessage(socketId, to)) return;
+    recordForRateLimitingAndBilling(socketId, to);
+    forwardMessage(serverKey, to, payload);
+  }
+};
 
 // Incoming connections might be from a client or another hub.
 const onClientConnect =

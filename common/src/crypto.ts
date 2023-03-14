@@ -39,21 +39,23 @@ export const encrypt = async (
   text: string,
 ): Promise<EncryptedString> => {
   const iv = Uint8Array.from(randomBytes(16));
-  return `${base64.fromUint8Array(
-    new Uint8Array(
-      await crypto.subtle.encrypt(
-        { name: "AES-CBC", iv },
-        await crypto.subtle.importKey(
-          "raw",
-          getNormalizedX(secp256k1.getSharedSecret(privKey, "02" + pubKey)),
-          { name: "AES-CBC" },
-          false,
-          ["encrypt"],
+  return `${
+    base64.fromUint8Array(
+      new Uint8Array(
+        await crypto.subtle.encrypt(
+          { name: "AES-CBC", iv },
+          await crypto.subtle.importKey(
+            "raw",
+            getNormalizedX(secp256k1.getSharedSecret(privKey, "02" + pubKey)),
+            { name: "AES-CBC" },
+            false,
+            ["encrypt"],
+          ),
+          new TextEncoder().encode(text),
         ),
-        new TextEncoder().encode(text),
       ),
-    ),
-  )}?iv=${base64.fromUint8Array(new Uint8Array(iv.buffer))}`;
+    )
+  }?iv=${base64.fromUint8Array(new Uint8Array(iv.buffer))}`;
 };
 
 export const decrypt = async (

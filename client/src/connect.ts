@@ -1,9 +1,9 @@
 import {
-  PrivateKey,
-  PublicKey,
   decrypt,
   encrypt,
   getPublicKey,
+  PrivateKey,
+  PublicKey,
   sign,
   verify,
 } from "../../common/src/crypto.ts";
@@ -73,7 +73,7 @@ export const connect = ({
       if (message.type === "validated") {
         console.debug("socket validated");
         resolve((x) =>
-          encryptAndSign(x.to, privateKey)(x).then(sendThroughSocket),
+          encryptAndSign(x.to, privateKey)(x).then(sendThroughSocket)
         );
       }
       if (message.type === "challenge") {
