@@ -1,12 +1,9 @@
-import * as secp256k1 from "npm:@noble/secp256k1";
+import * as base64 from "https://denopkg.com/chiefbiiko/base64@master/mod.ts";
+import * as secp256k1 from "https://deno.land/x/secp256k1/mod.ts";
 
-import { base64 } from "npm:@scure/base";
 import { cryptoRandomString } from "https://deno.land/x/crypto_random_string@1.0.0/mod.ts";
-import { randomBytes } from "npm:@noble/hashes/utils";
-import { sha256 } from "npm:@noble/hashes/sha256";
-
-secp256k1.utils.sha256Sync = (...msgs) =>
-  sha256(secp256k1.utils.concatBytes(...msgs));
+import { randomBytes } from "node:crypto";
+import { sha256 } from "https://denopkg.com/chiefbiiko/sha256@v1.0.0/mod.ts";
 
 export type PrivateKey = ReturnType<typeof generatePrivateKey>;
 export type PublicKey = ReturnType<typeof getPublicKey>;
@@ -42,7 +39,7 @@ export const encrypt = async (
   text: string,
 ): Promise<EncryptedString> => {
   const iv = Uint8Array.from(randomBytes(16));
-  return `${base64.encode(
+  return `${base64.fromUint8Array(
     new Uint8Array(
       await crypto.subtle.encrypt(
         { name: "AES-CBC", iv },
@@ -56,7 +53,7 @@ export const encrypt = async (
         new TextEncoder().encode(text),
       ),
     ),
-  )}?iv=${base64.encode(new Uint8Array(iv.buffer))}`;
+  )}?iv=${base64.fromUint8Array(new Uint8Array(iv.buffer))}`;
 };
 
 export const decrypt = async (
@@ -67,7 +64,7 @@ export const decrypt = async (
   const [ctb64, ivb64] = data.split("?iv=");
   return new TextDecoder().decode(
     await crypto.subtle.decrypt(
-      { name: "AES-CBC", iv: base64.decode(ivb64) },
+      { name: "AES-CBC", iv: base64.toUint8Array(ivb64) },
       await crypto.subtle.importKey(
         "raw",
         getNormalizedX(secp256k1.getSharedSecret(privKey, "02" + pubKey)),
@@ -75,7 +72,7 @@ export const decrypt = async (
         false,
         ["decrypt"],
       ),
-      base64.decode(ctb64),
+      base64.toUint8Array(ctb64),
     ),
   );
 };
