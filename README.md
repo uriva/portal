@@ -1,5 +1,46 @@
 `portal` is a service to abstract away networking configuration, and replace them with an in-language API that developers can use easily.
 
+`npm i message-portal`
+
+# Example usage
+
+```
+const { connect, generatePrivateKey, getPublicKey } = require("message-portal");
+
+// Imagine each of these segments happen on a different machine, with
+// arbitrary networking setup.
+// All Alice and Bob need to do to communicate is have the other party's public key.
+Promise.all([generatePrivateKey(), generatePrivateKey()]).then(([alice, bob]) =>
+  Promise.all([
+    connect({
+      privateKey: alice,
+      onMessage: ({ from, payload }) =>
+        Promise.resolve(console.log(`bob (${from}) says`, payload)),
+      onClose: () => {},
+    }),
+    connect({
+      privateKey: bob,
+      onMessage: ({ from, payload }) =>
+        Promise.resolve(console.log(`alice (${from}) says`, payload)),
+      onClose: () => {},
+    }),
+  ]).then(([aliceSendMessage, bobSendMessage]) => {
+    aliceSendMessage({
+      to: getPublicKey(bob),
+      payload: { text: "hello Bob! I've sent you this small json" },
+    }).then(() => {
+      console.log("Bob has acked!");
+    });
+    bobSendMessage({
+      to: getPublicKey(alice),
+      payload: "hello alice here's a string message",
+    }).then(() => {
+      console.log("Alice has acked!");
+    });
+  }),
+);
+```
+
 # Motivation
 
 Typical quotes:
