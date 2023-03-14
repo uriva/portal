@@ -7,51 +7,59 @@ them with an in-language API that developers can use easily.
 
 `npm i message-portal`
 
-Alice's machine:
+First make keys for Alice and Bob:
 
 ```js
-const { connect, generatePrivateKey, getPublicKey } = require("message-portal");
+const { generatePrivateKey, getPublicKey } = require("message-portal");
 
-generatePrivateKey()
-  .then((alice) =>
-    connect({
-      privateKey: alice,
-      onMessage: ({ from, payload }) =>
-        Promise.resolve(console.log(`bob (${from}) says`, payload)),
-      onClose: () => {},
-    }),
-  )
-  .then((sendMessage) => {
-    sendMessage({
-      to: getPublicKey(bob),
-      payload: { text: "hello Bob! I've sent you this json." },
-    }).then(() => {
-      console.log("Bob has acked!");
-    });
-  });
+const privateKey = generatePrivateKey();
+console.log(getPublicKey(privateKey), privateKey);
 ```
 
-Bob's machine:
+Then on Alice's machine:
 
 ```js
-const { connect, generatePrivateKey, getPublicKey } = require("message-portal");
-generatePrivateKey()
-  .then((bob) =>
-    connect({
-      privateKey: bob,
-      onMessage: ({ from, payload }) =>
-        Promise.resolve(console.log(`alice (${from}) says`, payload)),
-      onClose: () => {},
-    }),
-  )
-  .then((sendMessage) => {
-    sendMessage({
-      to: getPublicKey(alice),
-      payload: "hello Alice, here's a string message.",
-    }).then(() => {
-      console.log("Alice has acked!");
-    });
+const { connect } = require("message-portal");
+
+const alicePrivateKey = "...";
+const bobPublicKey = "...";
+
+connect({
+  privateKey: alicePrivateKey,
+  onMessage: ({ from, payload }) =>
+    Promise.resolve(console.log(`Bob (${from}) says`, payload)),
+  onClose: () => {},
+}).then((sendMessage) => {
+  sendMessage({
+    to: bobPublicKey,
+    payload: { text: "hello Bob! I've sent you this json." },
+  }).then(() => {
+    console.log("Bob has acked!");
   });
+});
+```
+
+On Bob's machine:
+
+```js
+const { connect } = require("message-portal");
+
+const bobPrivateKey = "...";
+const alicePublicKey = "...";
+
+connect({
+  privateKey: bobPrivateKey,
+  onMessage: ({ from, payload }) =>
+    Promise.resolve(console.log(`Alice (${from}) says`, payload)),
+  onClose: () => {},
+}).then((sendMessage) => {
+  sendMessage({
+    to: alicePublicKey,
+    payload: "hello Alice, here's a string message.",
+  }).then(() => {
+    console.log("Alice has acked!");
+  });
+});
 ```
 
 ## Motivation
@@ -85,3 +93,5 @@ get instant connectivity.
 
 Implementation is very simple - e2e encrypted messages are passed through a
 socket connecion to a third party server, running open source code.
+
+Messages are e2e encrypted, so the server cannot look into them.
