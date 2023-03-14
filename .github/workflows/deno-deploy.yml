@@ -1,0 +1,5 @@
+uses: denoland/deployctl@v1
+with:
+  project: uriva-portal
+  entrypoint: hub/src/index.ts
+  import-map: hub/src/deno.json
