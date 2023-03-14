@@ -55,15 +55,17 @@ export const connect = ({
   onMessage,
   onClose,
 }: ConnectOptions): Promise<(message: ClientToLib) => void> =>
-  new Promise((resolve) => {
+  new Promise((resolve, reject) => {
     const socket = new StandardWebSocketClient(
-      "ws://uriva-portal.deno.dev/",
-      // Deno.env.get("url") || "ws://localhost:3000",
+      Deno.env.get("url") || "ws://uriva-portal.deno.dev/",
     );
     const sendThroughSocket = (x: types.ClientLibToServer) =>
       socket.send(JSON.stringify(x));
     socket.on("open", () => {
       console.debug("socket opened");
+    });
+    socket.on("error", () => {
+      reject("could not open connection");
     });
     socket.on("close", onClose);
     socket.on("message", async ({ data }) => {
