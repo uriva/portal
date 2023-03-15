@@ -1,4 +1,4 @@
-import { connect, IncomingMessage } from "./connect.ts";
+import { IncomingMessage, connect } from "./connect.ts";
 import { crypto, types } from "../../common/src/index.ts";
 
 type ClientToExterior = { to: crypto.PublicKey; payload: types.ClientMessage };
@@ -6,9 +6,9 @@ type ClientToExterior = { to: crypto.PublicKey; payload: types.ClientMessage };
 type AckProtocolPayload =
   | { type: "ack"; payload: { id: string } }
   | {
-    type: "message";
-    payload: { id: string; payload: types.RegularMessagePayload };
-  };
+      type: "message";
+      payload: { id: string; payload: types.RegularMessagePayload };
+    };
 
 type AckProtocol = { to: crypto.PublicKey; payload: AckProtocolPayload };
 
@@ -40,7 +40,7 @@ export const connectWithAcking = async ({
         acks.delete(message.payload.id);
       }
       if (type === "message") {
-        onMessage({ from: message.from, payload }).then(() => {
+        onMessage({ from: message.from, payload: payload.payload }).then(() => {
           send({
             to: message.from,
             payload: { type: "ack", payload: { id: payload.id } },
