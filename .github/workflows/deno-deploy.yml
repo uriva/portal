@@ -14,4 +14,4 @@ jobs:
         with:
           project: uriva-portal
           entrypoint: hub/src/index.ts
-          import-map: deno.jsonc
+          import-map: deno.json
