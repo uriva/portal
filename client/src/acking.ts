@@ -10,8 +10,6 @@ type AckProtocolPayload =
       payload: { id: string; payload: types.RegularMessagePayload };
     };
 
-type AckProtocol = { to: crypto.PublicKey; payload: AckProtocolPayload };
-
 export interface ConnectWithAckingOptions {
   privateKey: crypto.PrivateKey;
   onMessage: (message: IncomingMessage) => Promise<void>;
@@ -22,11 +20,12 @@ export const connectWithAcking = async ({
   privateKey,
   onMessage,
   onClose,
-}: ConnectWithAckingOptions): Promise<
-  (message: ClientToExterior) => Promise<void>
-> => {
+}: ConnectWithAckingOptions): Promise<{
+  send: (message: ClientToExterior) => Promise<void>;
+  close: () => void;
+}> => {
   const acks = new Map<string, () => void>();
-  const send: (msg: AckProtocol) => void = await connect({
+  const { send, close } = await connect({
     privateKey,
     onMessage: (message: IncomingMessage) => {
       const { type, payload }: AckProtocolPayload = message.payload;
@@ -50,10 +49,13 @@ export const connectWithAcking = async ({
     },
     onClose,
   });
-  return ({ to, payload }: ClientToExterior) =>
-    new Promise((resolve) => {
-      const id = crypto.randomString(10);
-      acks.set(id, resolve);
-      send({ to, payload: { type: "message", payload: { id, payload } } });
-    });
+  return {
+    close,
+    send: ({ to, payload }: ClientToExterior) =>
+      new Promise((resolve) => {
+        const id = crypto.randomString(10);
+        acks.set(id, resolve);
+        send({ to, payload: { type: "message", payload: { id, payload } } });
+      }),
+  };
 };

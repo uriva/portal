@@ -30,8 +30,8 @@ connect({
   onMessage: ({ from, payload }) =>
     Promise.resolve(console.log(`Bob (${from}) says`, payload)),
   onClose: () => {},
-}).then((sendMessage) => {
-  sendMessage({
+}).then(({ send }) => {
+  send({
     to: bobPublicKey,
     payload: { text: "hello Bob! I've sent you this json." },
   }).then(() => {
@@ -53,8 +53,8 @@ connect({
   onMessage: ({ from, payload }) =>
     Promise.resolve(console.log(`Alice (${from}) says`, payload)),
   onClose: () => {},
-}).then((sendMessage) => {
-  sendMessage({
+}).then(({ send }) => {
+  send({
     to: alicePublicKey,
     payload: "hello Alice, here's a string message.",
   }).then(() => {

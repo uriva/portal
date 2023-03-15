@@ -54,7 +54,10 @@ export const connect = ({
   privateKey,
   onMessage,
   onClose,
-}: ConnectOptions): Promise<(message: ClientToLib) => void> =>
+}: ConnectOptions): Promise<{
+  send: (message: ClientToLib) => void;
+  close: () => void;
+}> =>
   new Promise((resolve, reject) => {
     const socket = new StandardWebSocketClient(
       Deno.env.get("url") || "wss://uriva-portal-mete6t9t7geg.deno.dev/",
@@ -72,9 +75,14 @@ export const connect = ({
       const message: types.ServerMessage = JSON.parse(data.toString());
       if (message.type === "validated") {
         console.debug("socket validated");
-        resolve((message) =>
-          encryptAndSign(message.to, privateKey)(message).then(sendThruSocket),
-        );
+        resolve({
+          close: () => socket.close(),
+          send: (message) =>
+            encryptAndSign(
+              message.to,
+              privateKey,
+            )(message).then(sendThruSocket),
+        });
       }
       if (message.type === "challenge") {
         console.debug("got challenge");
