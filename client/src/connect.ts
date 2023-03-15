@@ -1,9 +1,9 @@
 import {
+  PrivateKey,
+  PublicKey,
   decrypt,
   encrypt,
   getPublicKey,
-  PrivateKey,
-  PublicKey,
   sign,
   verify,
 } from "../../common/src/crypto.ts";
@@ -46,9 +46,9 @@ const signEncryptedMessage =
 const encryptAndSign =
   (publicKey: PublicKey, privateKey: PrivateKey) =>
   ({ payload, to }: ClientToLib): Promise<ServerRegularMessage> =>
-    encrypt(privateKey, publicKey, JSON.stringify(payload))
-      .then(JSON.stringify)
-      .then(signEncryptedMessage(privateKey, to));
+    encrypt(privateKey, publicKey, JSON.stringify(payload)).then(
+      signEncryptedMessage(privateKey, to),
+    );
 
 export const connect = ({
   privateKey,
@@ -59,8 +59,8 @@ export const connect = ({
     const socket = new StandardWebSocketClient(
       Deno.env.get("url") || "wss://uriva-portal-mete6t9t7geg.deno.dev/",
     );
-    const sendThroughSocket = (x: types.ClientLibToServer) =>
-      socket.send(JSON.stringify(x));
+    const sendThruSocket = (message: types.ClientLibToServer) =>
+      socket.send(JSON.stringify(message));
     socket.on("open", () => {
       console.debug("socket opened");
     });
@@ -72,14 +72,14 @@ export const connect = ({
       const message: types.ServerMessage = JSON.parse(data.toString());
       if (message.type === "validated") {
         console.debug("socket validated");
-        resolve((x) =>
-          encryptAndSign(x.to, privateKey)(x).then(sendThroughSocket)
+        resolve((message) =>
+          encryptAndSign(message.to, privateKey)(message).then(sendThruSocket),
         );
       }
       if (message.type === "challenge") {
         console.debug("got challenge");
         const { challenge } = message.payload;
-        sendThroughSocket({
+        sendThruSocket({
           type: "id",
           payload: {
             publicKey: getPublicKey(privateKey),
@@ -100,9 +100,7 @@ export const connect = ({
           return;
         }
         onMessage({
-          payload: JSON.parse(
-            await decrypt(privateKey, from, JSON.parse(payload)),
-          ),
+          payload: JSON.parse(await decrypt(privateKey, from, payload)),
           from,
         });
       }
