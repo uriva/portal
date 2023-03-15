@@ -1,5 +1,7 @@
 # Portal
 
+![A simple trick](https://mastermixmovies.files.wordpress.com/2018/10/290a2-prestige5.jpg)
+
 `portal` is a service to abstract away networking configuration, and replace
 them with an in-language API that developers can use easily.
 
