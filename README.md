@@ -8,7 +8,7 @@ Send JSON messages from anywhere to anywhere with 0 configuration.
 
 `npm i message-portal`
 
-First make keys for Alice and Bob:
+First make keys for Alice and Bob (repeat this twice):
 
 ```js
 const { generatePrivateKey, getPublicKey } = require("message-portal");
