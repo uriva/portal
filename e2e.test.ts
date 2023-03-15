@@ -8,8 +8,6 @@ import {
   getPublicKey,
 } from "./client/src/index.ts";
 
-import { delay } from "https://deno.land/std@0.179.0/async/delay.ts";
-
 const alicePayload = { text: "hello Bob! I've sent you this json." };
 const bobPayload = "hello Alice, here's a string message.";
 
@@ -65,7 +63,7 @@ Deno.test("e2e", async () => {
         ]).then(() => () => {
           aliceFn.close();
           bobFn.close();
-        }),
+        })
       )
       .then((close) => {
         assertEquals(

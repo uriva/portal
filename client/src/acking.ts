@@ -1,4 +1,4 @@
-import { IncomingMessage, connect } from "./connect.ts";
+import { connect, IncomingMessage } from "./connect.ts";
 import { crypto, types } from "../../common/src/index.ts";
 
 type ClientToExterior = { to: crypto.PublicKey; payload: types.ClientMessage };
@@ -6,9 +6,9 @@ type ClientToExterior = { to: crypto.PublicKey; payload: types.ClientMessage };
 type AckProtocolPayload =
   | { type: "ack"; payload: { id: string } }
   | {
-      type: "message";
-      payload: { id: string; payload: types.RegularMessagePayload };
-    };
+    type: "message";
+    payload: { id: string; payload: types.RegularMessagePayload };
+  };
 
 export interface ConnectWithAckingOptions {
   privateKey: crypto.PrivateKey;

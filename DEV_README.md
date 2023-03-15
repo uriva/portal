@@ -14,4 +14,5 @@ rm dist/
 deno task test
 ```
 
-If this gives you trouble make sure you deleted the output directory of the build task.
+If this gives you trouble make sure you deleted the output directory of the
+build task.
