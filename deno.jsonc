@@ -1,7 +1,8 @@
 {
   "tasks": {
-    // Add semver at the end, e.g. `deno build 0.0.3`.
-    "build": "deno run --allow-run --allow-net --allow-write --allow-read --allow-env=DENO_DIR,XDG_CACHE_HOME,HOME,DENO_AUTH_TOKENS client/build_npm.ts"
+    // Add semver at the end, e.g. `deno task build 0.0.3`.
+    "build": "deno run --allow-run --allow-net --allow-write --allow-read --allow-env=DENO_DIR,XDG_CACHE_HOME,HOME,DENO_AUTH_TOKENS client/build_npm.ts",
+    "test": "deno test --allow-env=url --allow-net"
   },
   "imports": { "crypto": "https://deno.land/std@0.177.0/node/crypto.ts" }
 }
