@@ -11,7 +11,7 @@ Send JSON messages from anywhere to anywhere with 0 configuration.
 First make keys for Alice and Bob (repeat this twice):
 
 ```js
-const { generatePrivateKey, getPublicKey } = require("message-portal");
+import { generatePrivateKey, getPublicKey } from "message-portal";
 
 const privateKey = generatePrivateKey();
 console.log(getPublicKey(privateKey), privateKey);
@@ -20,7 +20,7 @@ console.log(getPublicKey(privateKey), privateKey);
 Then on Alice's machine:
 
 ```js
-const { connect } = require("message-portal");
+import { connect } from "message-portal";
 
 const alicePrivateKey = "...";
 const bobPublicKey = "...";
@@ -43,7 +43,7 @@ connect({
 On Bob's machine:
 
 ```js
-const { connect } = require("message-portal");
+import { connect } from "message-portal";
 
 const bobPrivateKey = "...";
 const alicePublicKey = "...";
