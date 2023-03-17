@@ -4,7 +4,7 @@
 
 ```sh
 deno task build 0.0.3
-npm publish dist/
+npm publish ./dist/
 rm dist/
 ```
 
