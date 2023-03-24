@@ -1,8 +1,6 @@
 import * as base64 from "https://denopkg.com/chiefbiiko/base64@master/mod.ts";
 import * as secp256k1 from "https://deno.land/x/secp256k1/mod.ts";
 
-import { cryptoRandomString } from "https://deno.land/x/crypto_random_string@1.0.0/mod.ts";
-import randomBytes from "https://deno.land/std@0.84.0/node/_crypto/randomBytes.ts";
 import { sha256 } from "https://denopkg.com/chiefbiiko/sha256@v1.0.0/mod.ts";
 
 export type PrivateKey = ReturnType<typeof generatePrivateKey>;
@@ -29,7 +27,9 @@ export const sign = (privateKey: PrivateKey, data: string) =>
 export type RandomString = string;
 
 export const randomString = (length: number): RandomString =>
-  cryptoRandomString({ length });
+  base64
+    .fromUint8Array(secp256k1.utils.randomBytes(Math.ceil((length * 3) / 4)))
+    .slice(0, length);
 
 const getNormalizedX = (key: Uint8Array): Uint8Array => key.slice(1, 33);
 export type EncryptedString = string;
@@ -38,24 +38,22 @@ export const encrypt = async (
   pubKey: PublicKey,
   text: string,
 ): Promise<EncryptedString> => {
-  const iv = Uint8Array.from(randomBytes(16));
-  return `${
-    base64.fromUint8Array(
-      new Uint8Array(
-        await crypto.subtle.encrypt(
-          { name: "AES-CBC", iv },
-          await crypto.subtle.importKey(
-            "raw",
-            getNormalizedX(secp256k1.getSharedSecret(privKey, "02" + pubKey)),
-            { name: "AES-CBC" },
-            false,
-            ["encrypt"],
-          ),
-          new TextEncoder().encode(text),
+  const iv = secp256k1.utils.randomBytes(16);
+  return `${base64.fromUint8Array(
+    new Uint8Array(
+      await crypto.subtle.encrypt(
+        { name: "AES-CBC", iv },
+        await crypto.subtle.importKey(
+          "raw",
+          getNormalizedX(secp256k1.getSharedSecret(privKey, "02" + pubKey)),
+          { name: "AES-CBC" },
+          false,
+          ["encrypt"],
         ),
+        new TextEncoder().encode(text),
       ),
-    )
-  }?iv=${base64.fromUint8Array(new Uint8Array(iv.buffer))}`;
+    ),
+  )}?iv=${base64.fromUint8Array(iv)}`;
 };
 
 export const decrypt = async (
