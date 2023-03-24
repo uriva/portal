@@ -8,7 +8,9 @@ connect({
   privateKey: alice,
   onMessage: ({ from, payload }) =>
     Promise.resolve(console.log(`Bob (${from}) says`, payload)),
-  onClose: () => {},
+  onClose: () => {
+    console.log("socket disconnected");
+  },
 }).then(({ send }) => {
   setInterval(() => {
     console.log("sending");
