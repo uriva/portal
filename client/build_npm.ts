@@ -8,13 +8,7 @@ await build({
   typeCheck: false,
   entryPoints: ["./client/src/index.ts"],
   outDir,
-  shims: {
-    undici: true,
-    webSocket: true,
-    timers: true,
-    deno: true,
-    crypto: true,
-  },
+  shims: { deno: true, crypto: true },
   package: {
     name: "message-portal",
     version: Deno.args[0],

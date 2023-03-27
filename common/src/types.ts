@@ -46,7 +46,8 @@ export interface ServerRegularMessage {
 export type ServerMessage =
   | ValidatedMessage
   | ServerChallengeMessage
-  | ServerRegularMessage;
+  | ServerRegularMessage
+  | NotValidatedMessage;
 
 export type ClientLibToServer =
   | ServerRegularMessage
