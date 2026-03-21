@@ -90,6 +90,12 @@ Using `portal` you can worry about this later or not at all, and simply
 `npm install` in two locations, plug in a string you generate locally, and you
 get instant connectivity.
 
+## Works everywhere
+
+Portal works in Node.js, Deno, and the browser. Since it uses WebSockets
+instead of HTTP, there are no CORS issues to deal with. Just `import` and go,
+even from a plain `<script>` tag.
+
 ## How does it work
 
 Implementation is very simple - e2e encrypted messages are passed through a

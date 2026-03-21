@@ -9,7 +9,6 @@ import {
 } from "../../common/src/crypto.ts";
 
 import { ServerRegularMessage } from "../../common/src/types.ts";
-import { StandardWebSocketClient } from "https://deno.land/x/websocket@v0.1.4/mod.ts";
 import { types } from "../../common/src/index.ts";
 
 export interface IncomingMessage {
@@ -19,6 +18,7 @@ export interface IncomingMessage {
 
 export interface ConnectOptions {
   privateKey: PrivateKey;
+  hubUrl?: string;
   onMessage: (message: IncomingMessage) => void;
   onClose: () => void;
   reconnect?: boolean;
@@ -64,15 +64,18 @@ const encryptAndSign =
       signEncryptedMessage(privateKey, to),
     );
 
+const DEFAULT_HUB_URL = "wss://uriva-portal-mete6t9t7geg.deno.dev/";
 const DEFAULT_MAX_RECONNECT_DELAY_MS = 30_000;
 const INITIAL_RECONNECT_DELAY_MS = 500;
 
 const connectOnce = ({
   privateKey,
+  hubUrl,
   onMessage,
   onClose,
 }: {
   privateKey: PrivateKey;
+  hubUrl: string;
   onMessage: (message: IncomingMessage) => void;
   onClose: () => void;
 }): Promise<{
@@ -80,21 +83,18 @@ const connectOnce = ({
   close: () => void;
 }> =>
   new Promise((resolve, reject) => {
-    const socket = new StandardWebSocketClient(
-      Deno.env.get("url") || "wss://uriva-portal-mete6t9t7geg.deno.dev/",
-    );
+    const socket = new WebSocket(hubUrl);
     const sendThruSocket = (message: types.ClientLibToServer) =>
       socket.send(JSON.stringify(message));
-    socket.on("open", () => {
+    socket.onopen = () => {
       console.debug("socket opened");
-    });
-    socket.on("error", () => {
+    };
+    socket.onerror = () => {
       reject("could not open connection");
-    });
-    socket.on("close", onClose);
-    // deno-lint-ignore no-explicit-any
-    socket.on("message", async ({ data }: { data: any }) => {
-      const message: types.ServerMessage = JSON.parse(data.toString());
+    };
+    socket.onclose = () => onClose();
+    socket.onmessage = async (event: MessageEvent) => {
+      const message: types.ServerMessage = JSON.parse(String(event.data));
       if (message.type === "validated") {
         console.debug("socket validated");
         resolve({
@@ -141,11 +141,12 @@ const connectOnce = ({
           from,
         });
       }
-    });
+    };
   });
 
 export const connect = ({
   privateKey,
+  hubUrl = DEFAULT_HUB_URL,
   onMessage,
   onClose,
   reconnect = true,
@@ -155,7 +156,7 @@ export const connect = ({
   close: () => void;
 }> => {
   if (!reconnect) {
-    return connectOnce({ privateKey, onMessage, onClose });
+    return connectOnce({ privateKey, hubUrl, onMessage, onClose });
   }
 
   let currentConnection: { send: (m: ClientToLib) => void; close: () => void } | null = null;
@@ -165,6 +166,7 @@ export const connect = ({
   const doConnect = (): Promise<void> =>
     connectOnce({
       privateKey,
+      hubUrl,
       onMessage,
       onClose: () => {
         currentConnection = null;
