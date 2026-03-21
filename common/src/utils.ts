@@ -18,10 +18,8 @@ export const getOrDefault = <K, V>(
 
 export const has = <K, V>(map: Map<K, V>, key: K) => map.has(key);
 
-export const remove = <K, V>(mapping: Map<K, V>, key: K) => {
-  const newMapping = { ...mapping };
-  newMapping.delete(key);
-  return newMapping;
+export const remove = <K, V>(mapping: Map<K, V>, key: K): void => {
+  mapping.delete(key);
 };
 
 export const removeAllFromArray = <V>(arr: Array<V>, value: V) => {

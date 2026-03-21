@@ -21,6 +21,8 @@ export interface ConnectOptions {
   privateKey: PrivateKey;
   onMessage: (message: IncomingMessage) => void;
   onClose: () => void;
+  reconnect?: boolean;
+  maxReconnectDelayMs?: number;
 }
 
 interface ClientToLib {
@@ -28,20 +30,32 @@ interface ClientToLib {
   payload: types.ClientMessage;
 }
 
-const signableString = (encryptedPayload: string, to: PublicKey) =>
-  encryptedPayload + to;
+const MAX_MESSAGE_AGE_MS = 5 * 60 * 1000;
+
+const signableString = (
+  encryptedPayload: string,
+  to: PublicKey,
+  timestamp: number,
+) => encryptedPayload + to + timestamp;
 
 const signEncryptedMessage =
   (privateKey: PrivateKey, to: PublicKey) =>
-  (encryptedStr: string): ServerRegularMessage => ({
-    type: "message",
-    payload: {
-      to,
-      from: getPublicKey(privateKey),
-      payload: encryptedStr,
-      certificate: sign(privateKey, signableString(encryptedStr, to)),
-    },
-  });
+  (encryptedStr: string): ServerRegularMessage => {
+    const timestamp = Date.now();
+    return {
+      type: "message",
+      payload: {
+        to,
+        from: getPublicKey(privateKey),
+        payload: encryptedStr,
+        timestamp,
+        certificate: sign(
+          privateKey,
+          signableString(encryptedStr, to, timestamp),
+        ),
+      },
+    };
+  };
 
 const encryptAndSign =
   (publicKey: PublicKey, privateKey: PrivateKey) =>
@@ -50,11 +64,18 @@ const encryptAndSign =
       signEncryptedMessage(privateKey, to),
     );
 
-export const connect = ({
+const DEFAULT_MAX_RECONNECT_DELAY_MS = 30_000;
+const INITIAL_RECONNECT_DELAY_MS = 500;
+
+const connectOnce = ({
   privateKey,
   onMessage,
   onClose,
-}: ConnectOptions): Promise<{
+}: {
+  privateKey: PrivateKey;
+  onMessage: (message: IncomingMessage) => void;
+  onClose: () => void;
+}): Promise<{
   send: (message: ClientToLib) => void;
   close: () => void;
 }> =>
@@ -71,7 +92,8 @@ export const connect = ({
       reject("could not open connection");
     });
     socket.on("close", onClose);
-    socket.on("message", async ({ data }) => {
+    // deno-lint-ignore no-explicit-any
+    socket.on("message", async ({ data }: { data: any }) => {
       const message: types.ServerMessage = JSON.parse(data.toString());
       if (message.type === "validated") {
         console.debug("socket validated");
@@ -96,15 +118,22 @@ export const connect = ({
         });
       }
       if (message.type === "message") {
-        const { payload, certificate, from } = message.payload;
+        const { payload, certificate, from, timestamp } = message.payload;
         if (
           !verify(
             from,
             certificate,
-            signableString(payload, getPublicKey(privateKey)),
+            signableString(payload, getPublicKey(privateKey), timestamp),
           )
         ) {
           console.error("ignoring a message with bad certificate");
+          return;
+        }
+        const age = Date.now() - timestamp;
+        if (age < 0 || age > MAX_MESSAGE_AGE_MS) {
+          console.error(
+            `ignoring a message with stale timestamp (age: ${age}ms)`,
+          );
           return;
         }
         onMessage({
@@ -114,3 +143,77 @@ export const connect = ({
       }
     });
   });
+
+export const connect = ({
+  privateKey,
+  onMessage,
+  onClose,
+  reconnect = true,
+  maxReconnectDelayMs = DEFAULT_MAX_RECONNECT_DELAY_MS,
+}: ConnectOptions): Promise<{
+  send: (message: ClientToLib) => void;
+  close: () => void;
+}> => {
+  if (!reconnect) {
+    return connectOnce({ privateKey, onMessage, onClose });
+  }
+
+  let currentConnection: { send: (m: ClientToLib) => void; close: () => void } | null = null;
+  let closed = false;
+  let reconnectDelay = INITIAL_RECONNECT_DELAY_MS;
+
+  const doConnect = (): Promise<void> =>
+    connectOnce({
+      privateKey,
+      onMessage,
+      onClose: () => {
+        currentConnection = null;
+        if (closed) {
+          onClose();
+          return;
+        }
+        console.debug(`connection lost, reconnecting in ${reconnectDelay}ms`);
+        setTimeout(() => {
+          if (closed) return;
+          doConnect().catch(() => {
+            // retry is handled inside doConnect via the onClose cycle
+          });
+        }, reconnectDelay);
+        reconnectDelay = Math.min(reconnectDelay * 2, maxReconnectDelayMs);
+      },
+    }).then((conn) => {
+      currentConnection = conn;
+      reconnectDelay = INITIAL_RECONNECT_DELAY_MS;
+    }).catch((err) => {
+      if (closed) return;
+      console.debug(`connection failed: ${err}, retrying in ${reconnectDelay}ms`);
+      return new Promise<void>((resolve) => {
+        setTimeout(() => {
+          if (closed) { resolve(); return; }
+          reconnectDelay = Math.min(reconnectDelay * 2, maxReconnectDelayMs);
+          doConnect().then(resolve).catch(resolve);
+        }, reconnectDelay);
+      });
+    });
+
+  return new Promise((resolve) => {
+    doConnect().then(() => {
+      resolve({
+        send: (message: ClientToLib) => {
+          if (!currentConnection) {
+            throw new Error("not connected");
+          }
+          currentConnection.send(message);
+        },
+        close: () => {
+          closed = true;
+          if (currentConnection) {
+            currentConnection.close();
+          } else {
+            onClose();
+          }
+        },
+      });
+    });
+  });
+};

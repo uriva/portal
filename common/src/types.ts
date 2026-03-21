@@ -36,6 +36,7 @@ export interface RegularMessagePayload {
   to: PublicKey;
   from: PublicKey;
   payload: EncryptedString;
+  timestamp: number;
 }
 
 export interface ServerRegularMessage {

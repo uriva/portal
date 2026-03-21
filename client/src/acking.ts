@@ -10,33 +10,55 @@ type AckProtocolPayload =
       payload: { id: string; payload: types.RegularMessagePayload };
     };
 
+const DEFAULT_ACK_TIMEOUT_MS = 30_000;
+
 export interface ConnectWithAckingOptions {
   privateKey: crypto.PrivateKey;
   onMessage: (message: IncomingMessage) => Promise<void>;
   onClose: () => void;
+  ackTimeoutMs?: number;
 }
 
 export const connectWithAcking = async ({
   privateKey,
   onMessage,
   onClose,
+  ackTimeoutMs = DEFAULT_ACK_TIMEOUT_MS,
 }: ConnectWithAckingOptions): Promise<{
   send: (message: ClientToExterior) => Promise<void>;
   close: () => void;
 }> => {
-  const acks = new Map<string, () => void>();
+  const acks = new Map<string, { resolve: () => void; reject: (err: Error) => void; timer: number }>();
+
+  const clearAck = (id: string) => {
+    const entry = acks.get(id);
+    if (entry) {
+      clearTimeout(entry.timer);
+      acks.delete(id);
+    }
+  };
+
+  const rejectAllPending = () => {
+    for (const [id, entry] of acks) {
+      clearTimeout(entry.timer);
+      entry.reject(new Error("connection closed before ack received"));
+      acks.delete(id);
+    }
+  };
+
   const { send, close } = await connect({
     privateKey,
     onMessage: (message: IncomingMessage) => {
       const { type, payload }: AckProtocolPayload = message.payload;
       if (type === "ack") {
-        const callback = acks.get(payload.id);
-        if (!callback) {
+        const entry = acks.get(payload.id);
+        if (!entry) {
           console.error(`missing entry for ack ${payload.id}`);
           return;
         }
-        callback();
-        acks.delete(message.payload.id);
+        clearTimeout(entry.timer);
+        entry.resolve();
+        acks.delete(payload.id);
       }
       if (type === "message") {
         onMessage({ from: message.from, payload: payload.payload }).then(() => {
@@ -47,14 +69,24 @@ export const connectWithAcking = async ({
         });
       }
     },
-    onClose,
+    onClose: () => {
+      rejectAllPending();
+      onClose();
+    },
   });
   return {
-    close,
+    close: () => {
+      rejectAllPending();
+      close();
+    },
     send: ({ to, payload }: ClientToExterior) =>
-      new Promise((resolve) => {
+      new Promise((resolve, reject) => {
         const id = crypto.randomString(10);
-        acks.set(id, resolve);
+        const timer = setTimeout(() => {
+          acks.delete(id);
+          reject(new Error(`ack timeout after ${ackTimeoutMs}ms`));
+        }, ackTimeoutMs);
+        acks.set(id, { resolve, reject, timer: timer as unknown as number });
         send({ to, payload: { type: "message", payload: { id, payload } } });
       }),
   };
