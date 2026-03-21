@@ -1,5 +1,5 @@
 import * as base64 from "https://denopkg.com/chiefbiiko/base64@v0.2.1/mod.ts";
-import * as secp256k1 from "https://deno.land/x/secp256k1/mod.ts";
+import * as secp256k1 from "https://deno.land/x/secp256k1@1.7.2/mod.ts";
 
 import { sha256 } from "https://denopkg.com/chiefbiiko/sha256@v1.0.0/mod.ts";
 
