@@ -1,4 +1,4 @@
-import { IncomingMessage, connect } from "./connect.ts";
+import { IncomingMessage, connect, ConnectOptions } from "./connect.ts";
 import { crypto, types } from "../../common/src/index.ts";
 
 type ClientToExterior = { to: crypto.PublicKey; payload: types.ClientMessage };
@@ -14,15 +14,21 @@ const DEFAULT_ACK_TIMEOUT_MS = 30_000;
 
 export interface ConnectWithAckingOptions {
   privateKey: crypto.PrivateKey;
+  hubUrl?: string;
   onMessage: (message: IncomingMessage) => Promise<void>;
   onClose: () => void;
+  reconnect?: boolean;
+  maxReconnectDelayMs?: number;
   ackTimeoutMs?: number;
 }
 
 export const connectWithAcking = async ({
   privateKey,
+  hubUrl,
   onMessage,
   onClose,
+  reconnect,
+  maxReconnectDelayMs,
   ackTimeoutMs = DEFAULT_ACK_TIMEOUT_MS,
 }: ConnectWithAckingOptions): Promise<{
   send: (message: ClientToExterior) => Promise<void>;
@@ -48,6 +54,9 @@ export const connectWithAcking = async ({
 
   const { send, close } = await connect({
     privateKey,
+    hubUrl,
+    reconnect,
+    maxReconnectDelayMs,
     onMessage: (message: IncomingMessage) => {
       const { type, payload }: AckProtocolPayload = message.payload;
       if (type === "ack") {

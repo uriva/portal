@@ -102,3 +102,19 @@ Implementation is very simple - e2e encrypted messages are passed through a
 socket connecion to a third party server, running open source code.
 
 Messages are e2e encrypted, so the server cannot look into them.
+
+## Security
+
+The relay server never sees your messages. Every message is encrypted with the
+recipient's public key before it leaves your machine, using ECDH key exchange
+over secp256k1. The server just shuffles opaque blobs around. A compromised
+server learns nothing about your message contents.
+
+This matters because the relay is a third party. You shouldn't have to trust it.
+With portal, you don't. The server could be logging everything and it wouldn't
+help an attacker.
+
+Every message includes a timestamp signed by the sender. The recipient rejects
+anything older than 5 minutes. This means if someone records your encrypted
+traffic and replays it later, the other side will just drop it. You're safe from
+re-transmission attacks without any extra configuration.
