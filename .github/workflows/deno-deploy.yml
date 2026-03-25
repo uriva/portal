@@ -8,10 +8,10 @@ jobs:
       contents: read
     steps:
       - name: Clone repository
-        uses: actions/checkout@v3
-      - name: Deploy to Deno Deploy
-        uses: denoland/deployctl@v1
+        uses: actions/checkout@v4
+      - name: Install Deno
+        uses: denoland/setup-deno@v2
         with:
-          project: uriva-portal
-          entrypoint: hub/src/index.ts
-          import-map: deno.json
+          deno-version: v2.x
+      - name: Deploy to Deno Deploy
+        run: deno deploy --prod
