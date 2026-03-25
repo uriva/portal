@@ -1,7 +1,9 @@
 {
   "tasks": {
-    "build": "deno run --allow-run --allow-net --allow-write --allow-read --allow-env=DENO_DIR,XDG_CACHE_HOME,HOME,DENO_AUTH_TOKENS client/build_npm.ts",
-    "test": "deno test --allow-env=url --allow-net"
+    "build": "deno run -A client/build_npm.ts",
+    "test": "deno test -A"
   },
-  "imports": { "crypto": "https://deno.land/std@0.177.0/node/crypto.ts" }
+  "imports": {
+    "crypto": "node:crypto"
+  }
 }

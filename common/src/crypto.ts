@@ -1,7 +1,6 @@
-import * as base64 from "https://denopkg.com/chiefbiiko/base64@v0.2.1/mod.ts";
+import { encodeBase64, decodeBase64 } from "jsr:@std/encoding/base64";
 import * as secp256k1 from "https://deno.land/x/secp256k1@1.7.2/mod.ts";
-
-import { sha256 } from "https://denopkg.com/chiefbiiko/sha256@v1.0.0/mod.ts";
+import { sha256 } from "npm:@noble/hashes@1.3.3/sha256";
 
 export type PrivateKey = ReturnType<typeof generatePrivateKey>;
 export type PublicKey = ReturnType<typeof getPublicKey>;
@@ -27,25 +26,24 @@ export const sign = (privateKey: PrivateKey, data: string) =>
 export type RandomString = string;
 
 export const randomString = (length: number): RandomString =>
-  base64
-    .fromUint8Array(secp256k1.utils.randomBytes(Math.ceil((length * 3) / 4)))
+  encodeBase64(secp256k1.utils.randomBytes(Math.ceil((length * 3) / 4)))
     .slice(0, length);
 
-const getNormalizedX = (key: Uint8Array): Uint8Array => key.slice(1, 33);
+const getNormalizedX = (key: Uint8Array): Uint8Array => new Uint8Array(key.slice(1, 33));
 export type EncryptedString = string;
 export const encrypt = async (
   privKey: PrivateKey,
   pubKey: PublicKey,
   text: string,
 ): Promise<EncryptedString> => {
-  const iv = secp256k1.utils.randomBytes(16);
-  return `${base64.fromUint8Array(
+  const iv = new Uint8Array(secp256k1.utils.randomBytes(16));
+  return `${encodeBase64(
     new Uint8Array(
       await crypto.subtle.encrypt(
         { name: "AES-CBC", iv },
         await crypto.subtle.importKey(
           "raw",
-          getNormalizedX(secp256k1.getSharedSecret(privKey, "02" + pubKey)),
+          new Uint8Array(getNormalizedX(secp256k1.getSharedSecret(privKey, "02" + pubKey))),
           { name: "AES-CBC" },
           false,
           ["encrypt"],
@@ -53,7 +51,7 @@ export const encrypt = async (
         new TextEncoder().encode(text),
       ),
     ),
-  )}?iv=${base64.fromUint8Array(iv)}`;
+  )}?iv=${encodeBase64(iv)}`;
 };
 
 export const decrypt = async (
@@ -64,15 +62,15 @@ export const decrypt = async (
   const [ctb64, ivb64] = data.split("?iv=");
   return new TextDecoder().decode(
     await crypto.subtle.decrypt(
-      { name: "AES-CBC", iv: base64.toUint8Array(ivb64) },
+      { name: "AES-CBC", iv: decodeBase64(ivb64) },
       await crypto.subtle.importKey(
         "raw",
-        getNormalizedX(secp256k1.getSharedSecret(privKey, "02" + pubKey)),
+        new Uint8Array(getNormalizedX(secp256k1.getSharedSecret(privKey, "02" + pubKey))),
         { name: "AES-CBC" },
         false,
         ["decrypt"],
       ),
-      base64.toUint8Array(ctb64),
+      decodeBase64(ctb64),
     ),
   );
 };

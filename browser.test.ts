@@ -14,8 +14,8 @@ const startHub = async (): Promise<Deno.ChildProcess> => {
       "hub/src/index.ts",
     ],
     env: { port: String(TEST_PORT) },
-    stdout: "null",
-    stderr: "null",
+    stdout: "inherit",
+    stderr: "inherit",
   });
   const process = cmd.spawn();
   const url = `ws://localhost:${TEST_PORT}/`;
@@ -118,8 +118,8 @@ Deno.test({
         "--disable-dev-shm-usage",
         `http://localhost:${HTTP_PORT}/`,
       ],
-      stdout: "null",
-      stderr: "null",
+      stdout: "inherit",
+      stderr: "inherit",
     });
     const chromeProcess = chrome.spawn();
 

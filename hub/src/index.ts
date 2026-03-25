@@ -1,10 +1,4 @@
-import {
-  generatePrivateKey,
-} from "../../common/src/crypto.ts";
-import {
-  WebSocketClient,
-  WebSocketServer,
-} from "https://deno.land/x/websocket@v0.1.4/mod.ts";
+import { generatePrivateKey } from "../../common/src/crypto.ts";
 import {
   conj,
   get,
@@ -33,25 +27,22 @@ type ServerOutgoingMessage =
   | ValidatedMessage
   | NotValidatedMessage;
 
-const publicKeyToSocket: Map<string, WebSocketClient[]> = new Map();
+const publicKeyToSocket: Map<string, WebSocket[]> = new Map();
 
 const sendMessageToClient =
-  (message: ServerOutgoingMessage) => (socket: WebSocketClient) =>
+  (message: ServerOutgoingMessage) => (socket: WebSocket) =>
     socket.send(JSON.stringify(message));
 
 const portEnvParam = "port";
 
-const forwardMessage = (
-  to: PublicKey,
-  payload: RegularMessagePayload,
-) => {
+const forwardMessage = (to: PublicKey, payload: RegularMessagePayload) => {
   getOrDefault([], publicKeyToSocket, to).forEach(
     sendMessageToClient({ type: "message", payload }),
   );
 };
 
 const onClientMessage = (
-  socket: WebSocketClient,
+  socket: WebSocket,
   challenge: string,
   socketIdentity: () => PublicKey | null,
   setSocketIdentity: (pk: PublicKey) => void,
@@ -76,11 +67,11 @@ const onClientMessage = (
   }
 };
 
-const onClientConnect = (socket: WebSocketClient) => {
+const onClientConnect = (socket: WebSocket) => {
   let socketPublicKey: null | PublicKey = null;
   const challenge = randomString(10);
   sendMessageToClient({ type: "challenge", payload: { challenge } })(socket);
-  socket.on("close", () => {
+  socket.addEventListener("close", () => {
     if (!socketPublicKey) return;
     if (!has(publicKeyToSocket, socketPublicKey)) return;
     const arr = get(publicKeyToSocket, socketPublicKey);
@@ -89,29 +80,37 @@ const onClientConnect = (socket: WebSocketClient) => {
       remove(publicKeyToSocket, socketPublicKey);
     }
   });
-  socket.on(
-    "message",
-    onClientMessage(
-      socket,
-      challenge,
-      () => socketPublicKey,
-      (publicKey: PublicKey) => {
-        socketPublicKey = publicKey;
-        set(
-          publicKeyToSocket,
-          publicKey,
-          conj(getOrDefault([], publicKeyToSocket, publicKey), socket),
-        );
-      },
-    ),
+
+  const handleMessage = onClientMessage(
+    socket,
+    challenge,
+    () => socketPublicKey,
+    (publicKey: PublicKey) => {
+      socketPublicKey = publicKey;
+      set(
+        publicKeyToSocket,
+        publicKey,
+        conj(getOrDefault([], publicKeyToSocket, publicKey), socket),
+      );
+    },
   );
+
+  socket.addEventListener("message", (event) => {
+    handleMessage(String(event.data));
+  });
 };
 
 const start = () => {
-  new WebSocketServer(parseInt(Deno.env.get(portEnvParam) || "3000")).on(
-    "connection",
-    onClientConnect,
-  );
+  Deno.serve({ port: parseInt(Deno.env.get(portEnvParam) || "3000") }, (req) => {
+    if (req.headers.get("upgrade") !== "websocket") {
+      return new Response("Not implemented", { status: 501 });
+    }
+    const { socket, response } = Deno.upgradeWebSocket(req);
+    socket.addEventListener("open", () => {
+      onClientConnect(socket);
+    });
+    return response;
+  });
 };
 
 start();
