@@ -8,6 +8,7 @@
   },
   "deploy": {
     "org": "uriva",
-    "app": "uriva-portal"
+    "app": "uriva-portal",
+    "entrypoint": "hub/src/index.ts"
   }
 }

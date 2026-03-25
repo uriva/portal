@@ -14,4 +14,4 @@ jobs:
         with:
           deno-version: v2.x
       - name: Deploy to Deno Deploy
-        run: deno deploy --prod hub/src/index.ts
+        run: deno deploy --prod
