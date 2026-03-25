@@ -14,4 +14,6 @@ jobs:
         with:
           deno-version: v2.x
       - name: Deploy to Deno Deploy
+        env:
+          DENO_DEPLOY_TOKEN: ${{ secrets.DENO_DEPLOY_TOKEN }}
         run: deno deploy --prod
