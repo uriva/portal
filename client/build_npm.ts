@@ -6,6 +6,7 @@ await emptyDir(outDir);
 
 await build({
   typeCheck: false,
+  test: false, // disable tests in dnt due to Deno APIs not available in Node
   entryPoints: ["./client/src/index.ts"],
   outDir,
   shims: {
@@ -17,7 +18,7 @@ await build({
   },
   package: {
     name: "message-portal",
-    version: Deno.args[0],
+    version: Deno.args[0] || "1.0.0",
     description: "Move messages without environment configuration.",
     license: "MIT",
     repository: {

@@ -1,4 +1,4 @@
-import { encodeBase64, decodeBase64 } from "jsr:@std/encoding/base64";
+import { encodeBase64, decodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 import * as secp256k1 from "https://deno.land/x/secp256k1@1.7.2/mod.ts";
 import { sha256 } from "npm:@noble/hashes@1.3.3/sha256";
 

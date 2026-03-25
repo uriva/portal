@@ -5,5 +5,9 @@
   },
   "imports": {
     "crypto": "node:crypto"
+  },
+  "deploy": {
+    "org": "uriva",
+    "app": "uriva-portal"
   }
 }
