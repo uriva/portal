@@ -62,7 +62,7 @@ export const decrypt = async (
   const [ctb64, ivb64] = data.split("?iv=");
   return new TextDecoder().decode(
     await crypto.subtle.decrypt(
-      { name: "AES-CBC", iv: decodeBase64(ivb64) },
+      { name: "AES-CBC", iv: new Uint8Array(decodeBase64(ivb64)) },
       await crypto.subtle.importKey(
         "raw",
         new Uint8Array(getNormalizedX(secp256k1.getSharedSecret(privKey, "02" + pubKey))),
@@ -70,7 +70,7 @@ export const decrypt = async (
         false,
         ["decrypt"],
       ),
-      decodeBase64(ctb64),
+      new Uint8Array(decodeBase64(ctb64)),
     ),
   );
 };

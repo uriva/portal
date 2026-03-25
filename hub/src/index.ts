@@ -96,7 +96,7 @@ const onClientConnect = (socket: WebSocket) => {
   });
 };
 
-Deno.serve((req) => {
+Deno.serve({ port: parseInt(Deno.env.get("port") || "8000") }, (req) => {
   if (req.headers.get("upgrade") !== "websocket") {
     return new Response("OK", { status: 200 }); // Health check for Deno Deploy
   }
