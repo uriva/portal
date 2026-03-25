@@ -9,5 +9,7 @@
   "deploy": {
     "org": "uriva",
     "app": "uriva-portal"
-  }
+  },
+  "exports": "./hub/src/index.ts",
+  "main": "./hub/src/index.ts"
 }
