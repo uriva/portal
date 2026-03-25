@@ -64,7 +64,7 @@ const encryptAndSign =
       signEncryptedMessage(privateKey, to),
     );
 
-const DEFAULT_HUB_URL = "wss://uriva-portal-mete6t9t7geg.deno.dev/";
+const DEFAULT_HUB_URL = "wss://uriva-portal.deno.dev/";
 const DEFAULT_MAX_RECONNECT_DELAY_MS = 30_000;
 const INITIAL_RECONNECT_DELAY_MS = 500;
 
