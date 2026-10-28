@@ -1,14 +1,12 @@
 {
   "tasks": {
     "build": "deno run -A client/build_npm.ts",
+    "build:worker": "deno run -A scripts/buildWorker.ts",
+    "deploy": "npx wrangler deploy",
     "test": "deno test -A"
   },
   "imports": {
     "crypto": "node:crypto"
-  },
-  "deploy": {
-    "org": "uriva",
-    "app": "uriva-portal"
   },
   "exports": "./hub/src/index.ts",
   "main": "./hub/src/index.ts"

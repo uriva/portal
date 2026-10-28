@@ -1,6 +1,18 @@
-import { encodeBase64, decodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
-import * as secp256k1 from "https://deno.land/x/secp256k1@1.7.2/mod.ts";
+import {
+  decodeBase64,
+  encodeBase64,
+} from "https://deno.land/std@0.224.0/encoding/base64.ts";
+import * as secp256k1 from "https://deno.land/x/secp256k1@1.7.2/index.ts";
+import { hmac } from "npm:@noble/hashes@1.3.3/hmac";
 import { sha256 } from "npm:@noble/hashes@1.3.3/sha256";
+
+secp256k1.utils.sha256Sync = (...msgs: Uint8Array[]): Uint8Array =>
+  sha256(secp256k1.utils.concatBytes(...msgs));
+
+secp256k1.utils.hmacSha256Sync = (
+  key: Uint8Array,
+  ...msgs: Uint8Array[]
+): Uint8Array => hmac(sha256, key, secp256k1.utils.concatBytes(...msgs));
 
 export type PrivateKey = ReturnType<typeof generatePrivateKey>;
 export type PublicKey = ReturnType<typeof getPublicKey>;

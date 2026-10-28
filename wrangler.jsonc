@@ -1,0 +1,40 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "uriva-portal",
+  "main": "dist/worker.js",
+  "compatibility_date": "2026-04-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "no_bundle": true,
+  "rules": [
+    {
+      "type": "ESModule",
+      "globs": ["**/*.js"]
+    }
+  ],
+  "build": {
+    "command": "deno run -A scripts/buildWorker.ts"
+  },
+  "routes": [
+    {
+      "pattern": "portal.uriv.me",
+      "custom_domain": true
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "PORTAL_DO",
+        "class_name": "PortalDO"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["PortalDO"]
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}
